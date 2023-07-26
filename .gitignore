@@ -153,3 +153,4 @@ cython_debug/
 
 # Ignore data files
 data/
+playground*
