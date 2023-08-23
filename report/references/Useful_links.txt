@@ -1,0 +1,2 @@
+Combining static and dynamic features in an LSTM:
+https://stackoverflow.com/questions/61300023/how-to-combine-static-features-with-time-series-in-forecasting

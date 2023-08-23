@@ -154,3 +154,7 @@ cython_debug/
 # Ignore data files
 data/
 playground*
+.tmp*/
+
+# Ignore NSF GRFP application files
+nsf_grfp/
