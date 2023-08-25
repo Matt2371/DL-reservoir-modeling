@@ -45,4 +45,3 @@ class test_data_processing(unittest.TestCase):
         expected[2, 1, :] = -1 # last 1 timesteps are padded (since 5%2 = 1)
         np.testing.assert_almost_equal(split_and_pad(torch.tensor(input), chunk_size=2, 
                                                      pad_value=pad_value).numpy(), expected)
-    
