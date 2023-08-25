@@ -36,4 +36,13 @@ class test_data_processing(unittest.TestCase):
         # test inverse transform
         np.testing.assert_almost_equal(scaler.inverse_transform(expected), input)
     
+    def test_split_and_pad(self):
+        """Testing split and pad function"""
+        pad_value= -1
+        input = np.ones((5, 4)) #(timesteps, features)
+        # get expected tensor for chunk size of 2
+        expected = np.ones((3, 2, 4)) #(num chunks, chunk size, features)
+        expected[2, 1, :] = -1 # last 1 timesteps are padded (since 5%2 = 1)
+        np.testing.assert_almost_equal(split_and_pad(torch.tensor(input), chunk_size=2, 
+                                                     pad_value=pad_value).numpy(), expected)
     

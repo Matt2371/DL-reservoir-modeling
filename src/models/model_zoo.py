@@ -60,12 +60,13 @@ class LSTMModel1(nn.Module):
         self.linear2 = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
-        out, cell_states = lstm_unroll(self.lstm_cell, self.hidden_size1, x)
+        # x is (batch size, timesteps, input size)
+        out, cell_states = lstm_unroll(self.lstm_cell, self.hidden_size1, x) # (batch size, timesteps, hidden size 1)
         out = self.dropout1(out)
-        out = self.linear1(out)
+        out = self.linear1(out) # (batch size, timesteps, hidden size 2)
         out = self.relu1(out)
         out = self.dropout2(out)
-        out = self.linear2(out)
+        out = self.linear2(out) # (batch size, timesteps, output size)
         return out, cell_states
 
 class LSTMModel1_opt(nn.Module):
@@ -81,10 +82,11 @@ class LSTMModel1_opt(nn.Module):
         self.linear2 = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
-        out, (h_n, c_n) = self.lstm(x)
+        # x is (batch size, timesteps, input size)
+        out, (h_n, c_n) = self.lstm(x) # out is (batch size, timesteps, hidden size 1)
         out = self.dropout1(out)
-        out = self.linear1(out)
+        out = self.linear1(out) # (batch size, timesteps, hidden size 2)
         out = self.relu1(out)
         out = self.dropout2(out)
-        out = self.linear2(out)
+        out = self.linear2(out) # (batch size, timesteps, output size)
         return out, (h_n, c_n)
