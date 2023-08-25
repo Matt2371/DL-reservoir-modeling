@@ -72,7 +72,7 @@ class LSTMModel1(nn.Module):
 class LSTMModel1_opt(nn.Module):
     """Same architecture as Model 1, but only returns sequence of hidden states and LAST hidden/cell state.
     Uses efficient PyTorch LSTM() layer"""
-    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, num_layers, dropout_prob):
+    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, num_layers=1, dropout_prob=0.5):
         super(LSTMModel1_opt, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size1, num_layers, batch_first=True)
         self.dropout1 = nn.Dropout(dropout_prob)
