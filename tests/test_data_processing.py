@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -36,12 +35,30 @@ class test_data_processing(unittest.TestCase):
         # test inverse transform
         np.testing.assert_almost_equal(scaler.inverse_transform(expected), input)
     
-    def test_split_and_pad(self):
+    def test_split_and_pad1(self):
         """Testing split and pad function"""
         pad_value= -1
         input = np.ones((5, 4)) #(timesteps, features)
         # get expected tensor for chunk size of 2
         expected = np.ones((3, 2, 4)) #(num chunks, chunk size, features)
-        expected[2, 1, :] = -1 # last 1 timesteps are padded (since 5%2 = 1)
+        expected[2, 1, :] = -1 # last 1 timesteps (last chunk, last step in chunk) are padded (since 5%2 = 1)
         np.testing.assert_almost_equal(split_and_pad(torch.tensor(input), chunk_size=2, 
                                                      pad_value=pad_value).numpy(), expected)
+        
+    def test_split_and_pad2(self):
+        """Testing split and pad function -- padding nan"""
+        pad_value= -1
+        input = np.ones((5, 4)) #(timesteps, features)
+        input[0, 0] = np.nan # add nan to input on the first timestep and first feature
+        # get expected tensor for chunk size of 2
+        expected = np.ones((3, 2, 4)) #(num chunks, chunk size, features)
+        expected[2, 1, :] = pad_value # last 1 timesteps (last chunk, last step in chunk) are padded (since 5%2 = 1)
+        expected[0, 0, 0] = pad_value # pad nan on the first timestep (first chunk, first step) and first feature
+        np.testing.assert_almost_equal(split_and_pad(torch.tensor(input), chunk_size=2, 
+                                                     pad_value=pad_value, pad_nan=True).numpy(), expected)
+    
+    def test_fill_na_mean(self):
+        """Testing fill_nan function to fill na with 0"""
+        input = np.array([[1.1, np.nan], [np.nan, 2.3], [np.nan, np.nan]])
+        expected = np.array([[1.1, 0], [0, 2.3], [0, 0]])
+        np.testing.assert_almost_equal(fill_nan(input), expected)

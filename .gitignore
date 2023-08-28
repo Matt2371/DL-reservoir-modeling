@@ -152,7 +152,8 @@ cython_debug/
 #.idea/
 
 # Ignore data files
-data/
+data/*
+! src/data/*
 playground*
 .tmp*/
 
