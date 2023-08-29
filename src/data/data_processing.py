@@ -132,7 +132,7 @@ class processing_pipeline():
         df_train, df_val, df_test = fill_nan(df_train), fill_nan(df_val), fill_nan(df_test)
         # 4. Convert data to PyTorch tensors (from numpy array)
         ts_train, ts_val, ts_test = torch.tensor(df_train, dtype=torch.float), torch.tensor(df_val, dtype=torch.float), torch.tensor(df_test, dtype=torch.float)
-        # 5. Split data into chunks and pad the remainder
-        ts_train, ts_val, ts_test = split_and_pad(ts_train), split_and_pad(ts_val), split_and_pad(ts_test)
+        # 5. Split data into chunks and pad the remainder (for training and validation sets)
+        ts_train, ts_val = split_and_pad(ts_train), split_and_pad(ts_val)
 
         return ts_train, ts_val, ts_test

@@ -32,6 +32,7 @@ def train_one_epoch(model, criterion, optimizer, dataloader_train, return_cell=T
 
     # training loop
     total_loss = 0
+    model.train() # set model to training mode
     for inputs, targets in dataloader_train:
         optimizer.zero_grad()
 
@@ -141,3 +142,31 @@ def training_loop(model, criterion, optimizer, patience, dataloader_train, datal
             break
     return train_losses, val_losses
 
+def plot_train_val(train_losses, val_losses, ax=None):
+    """
+    Plot train and validation losses vs epochs after running training loop
+    Params:
+    train_losses -- list, training losses per epoch
+    val_losses -- list, validation losses per epoch
+    ax -- matplotlib axes, if provided
+    """
+    assert len(train_losses) == len(val_losses)
+    if ax is not None:
+        ax.plot(train_losses)
+        ax.plot(val_losses)
+        ax.legend(['training loss', 'validation loss'])
+        ax.set_xlabel('Epochs')
+        ax.set_ylabel('Loss')
+    else:
+        plt.clf()
+        plt.plot(train_losses)
+        plt.plot(val_losses)
+        plt.legend(['training loss', 'validation loss'])
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+
+def final_error(val_losses):
+    """ 
+    Print the final validation loss and the number of training epochs
+    """
+    print(f'Final validation loss: {val_losses[-1]}, Epochs trained: {len(val_losses)}')
