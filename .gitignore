@@ -157,5 +157,14 @@ data/*
 playground*
 .tmp*/
 
+report/references/to_read/
+
+# Ignore batch scripts
+jobs/
+*.sh
+
+# Ignore archive
+archive/
+
 # Ignore NSF GRFP application files
 nsf_grfp/
