@@ -10,7 +10,7 @@ from tqdm import tqdm
 def create_mask(x, pad_value=-1):
     """Create mask to hide padded outputs from the loss function"""
 
-    # x is same shape as targets from dataloader; (batchsize, chunk_size, 1)
+    # x is same shape as TARGETS from dataloader; (batchsize, chunk_size, 1)
     mask = (x != pad_value).to(torch.float)
     return mask
 
