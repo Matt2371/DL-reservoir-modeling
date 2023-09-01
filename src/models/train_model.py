@@ -130,7 +130,7 @@ def training_loop(model, criterion, optimizer, patience, dataloader_train, datal
     num_epochs = epochs
     train_losses = [] # keep track of training and val losses for Model 1
     val_losses = []
-    early_stopper = EarlyStopper(patience=10) # instantiate early stopper
+    early_stopper = EarlyStopper(patience=patience) # instantiate early stopper
     for epoch in tqdm(range(num_epochs), desc='Training epochs: '):
         model.train() # set model1 to training mode
         train_loss = train_one_epoch(model, criterion, optimizer, dataloader_train)
