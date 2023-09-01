@@ -8,7 +8,7 @@ import torch.nn as nn
 
 def lstm_unroll(lstm_cell, hidden_size, input):
     """
-    Unroll a lstm cell so we have access to cell states.
+    Unroll a lstm cell manually so we have access to cell states.
     Params:
     lstm_cell -- nn.LSTMCell(input size, hidden size) object
     hidden_size -- int, number of hidden states, must match how lstm_cell was instantiated

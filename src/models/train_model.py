@@ -5,7 +5,8 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-#### FUNCTIONS AND CLASSES TO ASSIST WITH MODEL TRAINING AND VALIDATION####
+#### FUNCTIONS AND CLASSES TO ASSIST WITH MODEL TRAINING AND VALIDATION ####
+#### RUN TRAINING_LOOP() FUNCTION TO TRAIN MODEL WITH EARLY STOPPING ####
 
 def create_mask(x, pad_value=-1):
     """Create mask to hide padded outputs from the loss function"""
