@@ -26,7 +26,7 @@ def train_one_epoch(model, criterion, optimizer, dataloader_train, return_cell=T
     criterion -- function to evaluate losses
     optmizer -- Pytorch optimizer
     dataloader_train -- Pytorch dataloader for training data
-    return_cell -- bool; whether the model returns the lstm cell states during forward pass
+    return_cell -- bool; whether the model only the output or intermediate states as well (e.g. lstm cell states)
     Return training loss (averaged for over each minibatch) for the epoch
     """
 
@@ -66,7 +66,7 @@ def val_one_epoch(model, criterion, dataloader_val, return_cell=True):
     model -- PyTorch model
     criterion -- function to evaluate losses
     dataloader_val -- Pytorch dataloader for validation data
-    return_cell -- bool; whether the model returns the lstm cell states during forward pass
+    return_cell -- bool; whether the model only the output or intermediate states as well (e.g. lstm cell states)
     Return validation loss (averaged for over each minibatch) for the epoch
     """
 
