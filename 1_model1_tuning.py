@@ -25,9 +25,9 @@ ts_train, ts_val, ts_test = pipeline.process_data(df)
 
 # Separate inputs(X) and targets (y)
 # select inflow and doy as input features
-X_train, X_val, X_test = ts_train[:, :, [0, 3]], ts_val[:, :, [0, 3]], ts_test[:, [0, 3]]
+X_train, X_val, X_test = ts_train[:, :, [0, 3]], ts_val[:, :, [0, 3]], ts_test[:, :, [0, 3]]
 # select outflow as target feature
-y_train, y_val, y_test = ts_train[:, :, [1]], ts_val[:, :, [1]], ts_test[:, [1]]
+y_train, y_val, y_test = ts_train[:, :, [1]], ts_val[:, :, [1]], ts_test[:, :, [1]]
 
 # Create PyTorch dataset and dataloader
 dataset_train, dataset_val = (TensorDataset(X_train, y_train), TensorDataset(X_val, y_val))

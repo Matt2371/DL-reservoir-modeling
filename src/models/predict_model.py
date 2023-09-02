@@ -51,6 +51,29 @@ def flatten_rm_pad(y_hat, y, pad_value=-1):
     assert y_hat_rm.shape == y_rm.shape # Sanity check
     return y_hat_rm, y_rm
 
+def plot_predicted_true(y_hat, y, alpha=1, ax=None):
+    """
+    Plot predicted vs. true values
+    Params: 
+    y_hat, y -- tensors of shape (timesteps, ), predicted and true sequences
+    alpha -- transparency
+    ax -- matplotlib axes, plot if provided
+    """
+
+    if ax is not None:
+        ax.plot(y, label='observed', alpha=alpha)
+        ax.plot(y_hat, label='predicted', alpha=alpha)
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Scaled releases')
+        ax.legend()
+    else:
+        plt.clf()
+        plt.plot(y, label='observed', alpha=alpha)
+        plt.plot(y_hat, label='predicted', alpha=alpha)
+        plt.xlabel('Time')
+        plt.ylabel('Scaled releases')
+        plt.legend()
+
     
 
 

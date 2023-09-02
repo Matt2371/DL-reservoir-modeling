@@ -16,5 +16,5 @@ class test_predict_model(unittest.TestCase):
         # Get outputs
         output_y_hat, output_y = flatten_rm_pad(y_hat=input_y_hat, y=input_y, pad_value=-1)
 
-        np.testing.assert_almost_equal(expected_y.numpy(), output_y.numpy())
-        np.testing.assert_almost_equal(expected_y_hat.numpy(), output_y_hat.numpy())
+        np.testing.assert_almost_equal(expected_y, output_y)
+        np.testing.assert_almost_equal(expected_y_hat, output_y_hat)
