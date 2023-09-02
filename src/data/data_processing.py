@@ -75,7 +75,7 @@ def split_and_pad(data, chunk_size=3*365, pad_value=-1, pad_nan=False):
     data -- input data, tensor of shape (timesteps, num_features)
     chunk_size -- int, number of timesteps in each chunk
     pad_value -- int, number that represents padding or nan values
-    pad_nan -- bool, whether or not to also pad nan with pad value
+    pad_nan -- bool, whether or not to also pad nan with pad value (note: nan is filled later in pipeline)
     Returns: 
     Tensor of shape (num_splits, chunk_size, num_features)
     """
