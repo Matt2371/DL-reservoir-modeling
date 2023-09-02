@@ -44,8 +44,9 @@ from src.models.hyperparameter_tuning import *
 
 # Define hyperparameter space
 names = ['num_layers', 'hidden1', 'hidden2', 'dropout', 'random_seed']
-arrays = [[1, 2], [30, 35, 40, 45, 50], [30, 35, 40, 45, 50], [0.3, 0.5, 0.7], [0, 10, 100]]
-grid = exhaustive_grid(arrays=arrays, names=names) # dataframe of shape (450, 5)
+arrays = [[1, 2], [5, 10, 15, 20, 25, 30, 35, 40, 45, 50], [5, 10, 15, 20, 25, 30, 35, 40, 45, 50], 
+          [0.3, 0.5, 0.7], [0, 10, 100, 1000, 10000]]
+grid = exhaustive_grid(arrays=arrays, names=names) # dataframe of shape (#runs, 5 (# params))
 results = grid.copy() # dataframe to save results
 results['epochs_trained'] = np.zeros(grid.shape[0])
 results['val_error'] = np.zeros(grid.shape[0])
