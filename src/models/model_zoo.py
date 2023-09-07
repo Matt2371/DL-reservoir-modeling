@@ -90,3 +90,68 @@ class LSTMModel1_opt(nn.Module):
         out = self.dropout2(out)
         out = self.linear2(out) # (batch size, timesteps, output size)
         return out, (h_n, c_n)
+
+class LSTMModel2(nn.Module):
+    """
+    Model 2: (autoregressive) 1 layer LSTM + 1 layer NN with dropout - predictions from previous timestep are
+    fed back in as input for the next timestep. Forward pass returns sequence of hidden AND cell states.
+    Uses manual lstm_unroll()
+    """
+    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, dropout_prob, initial_output=0):
+        """
+        Params:
+        input_size -- # of features in input (EXCLUDING autoregressive input)
+        hidden_size1 -- # of hidden units in LSTM
+        hidden_size2 -- # of hidden units in Feedforward
+        output_size -- # of features in output
+        dropout_prob -- dropout probability for dropout layers
+        initial_output -- initialize "previous" output for first timestep
+        """
+        super(LSTMModel2, self).__init__()
+        self.inital_output = initial_output
+        self.hidden_size1 = hidden_size1
+        self.hidden_size2 = hidden_size2
+        self.lstm_cell = nn.LSTMCell(input_size + 1, self.hidden_size1) # + 1 to account for prev output
+        self.dropout1 = nn.Dropout(dropout_prob)
+        self.linear1 = nn.Linear(hidden_size1, hidden_size2)
+        self.relu1 = nn.ReLU()
+        self.dropout2 = nn.Dropout(dropout_prob)
+        self.linear2 = nn.Linear(hidden_size2, output_size)
+
+    def forward(self, x):
+        # get dimensions
+        N, L, Hin = x.shape # input shape is (batch size, timesteps, input size)
+        # initialize hidden, cell states
+        hx, cx = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
+
+        hidden_states = [] # store sequence of hidden states
+        cell_states = [] # store sequence of cell states
+        output = [] # store predictions
+        prev_output = self.inital_output * torch.ones((N, 1)) # initialize previous output (batch size, output size)
+
+        for i in range(L):
+            # append previous output: (batch size, input size) -> (batch size, input size + 1)
+            input_i = torch.cat([x[:, i, :], prev_output], dim=-1)
+            hx, cx = self.lstm_cell(input_i, (hx, cx)) # hx, cx is of shape (batch size, hidden size 1)
+
+            # save hidden and cell states
+            hidden_states.append(hx)
+            cell_states.append(cx)
+
+            # add feedforward layers to get output
+            out = self.dropout1(hx) # (batch size, hidden size 1)
+            out = self.linear1(out) # (batch size, hidden size 2)
+            out = self.relu1(out)
+            out = self.dropout2(out)
+            out = self.linear2(out) # (batch size, output size)
+
+            # save results
+            output.append(out)
+            prev_output = out
+    
+        # concatenate results along new dimension (create timesteps dimension at dim=1)
+        hidden_states = torch.stack(hidden_states, dim=1) # (batch, timesteps, hidden size1)
+        cell_states = torch.stack(cell_states, dim=1) # (batch, timesteps, hidden size1)
+        output = torch.stack(output, dim=1) # (batch, timesteps, output size)
+
+        return output, cell_states
