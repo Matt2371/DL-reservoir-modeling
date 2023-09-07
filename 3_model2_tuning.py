@@ -7,10 +7,14 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-## Data Processing
 from src.data.data_processing import *
 from src.data.data_fetching import *
+from src.models.model_zoo import *
+from src.models.predict_model import *
+from src.models.train_model import *
+from src.models.hyperparameter_tuning import *
 
+## Data Processing
 # Read in data, columns are [inflow, outflow, storage]
 df = usbr_fetch_data(name='Shasta', vars=['inflow', 'outflow', 'storage'])
 # Add day of the year (doy) as another column
@@ -37,11 +41,6 @@ dataloader_train, dataloader_val = (DataLoader(dataset_train, batch_size=1, shuf
 
 
 ## Conduct Grid Search
-from src.models.model_zoo import *
-from src.models.predict_model import *
-from src.models.train_model import *
-from src.models.hyperparameter_tuning import *
-
 # Define hyperparameter space
 names = ['num_layers', 'hidden1', 'hidden2', 'dropout', 'random_seed']
 arrays = [[1], [25, 30, 35], [10, 15, 20], 
