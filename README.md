@@ -28,7 +28,7 @@ of shape (batches, batch size - e.g. 3 years, features) corresponding the the tr
 ### Models
 1. The model_zoo contains class definitions for PyTorch models used in the project.\
 Model 1: a one layer LSTM + 1 layer FF network that takes inflow and DOY as input\
-Model 2: the same architecture as Model 1, except the previous predicted release is also an input to the next timestep (autoregressive LSTM)\
+Model 2: the same architecture as Model 1, except the previous predicted release is also an input to the next timestep (autoregressive LSTM)
 
 2. The train_model submodule defines functions and classes for masking padded values from the loss function, implementing early stopping (applied by default), and conducting the training loop. The full
 training loop can be accessed using the training_loop function, given the PyTorch model, optimizer, and criterion (e.g. MSE loss), and the desired patience for the early stopper.
