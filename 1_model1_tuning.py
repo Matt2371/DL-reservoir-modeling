@@ -1,4 +1,6 @@
 #### Conduct grid search to tune hyperparameters of model 1 on Shasta data (1944-2022) ####
+#### Also trains and saves optimal model ####
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -81,3 +83,41 @@ for i in range(grid.shape[0]):
 
 # Save results
 results.to_csv('report/results/hyperparameter_tuning/model1_tuning.csv')
+
+## Train model with optimal hyperparameters and save
+# Find optimal hyperparameters
+# Load in results from grid search
+grid_df = pd.read_csv('report/results/hyperparameter_tuning/model1_tuning.csv', index_col=0)
+# Average performance over the random seeds
+num_random_seeds = 5
+grid_df['param_id'] = np.repeat(np.arange(int(len(grid_df) / num_random_seeds)), num_random_seeds)
+grid_df_mean = grid_df.groupby('param_id').mean()
+grid_df_mean.drop(columns=['random_seed'], inplace=True)
+# Save sorted df
+grid_df_mean.sort_values(by=['val_error'], axis=0, inplace=True)
+grid_df_mean.to_csv('report/results/hyperparameter_tuning/model1_avg_tuning.csv')
+
+# Instantiate optiamal model
+input_size = 2
+hidden_size1 = int(grid_df_mean.iloc[0].hidden1)
+hidden_size2 = int(grid_df_mean.iloc[0].hidden2)
+output_size = 1
+dropout_prob = grid_df_mean.iloc[0].dropout
+num_layers = int(grid_df_mean.iloc[0].num_layers)
+
+torch.manual_seed(0)
+model1 = LSTMModel1(input_size=input_size, hidden_size1=hidden_size1, 
+                             hidden_size2=hidden_size2, output_size=output_size, dropout_prob=dropout_prob)
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model1.parameters(), lr=0.001)
+
+# Run training loop
+train_losses, val_losses = training_loop(model=model1, criterion=criterion, optimizer=optimizer, 
+                                         patience=10, dataloader_train=dataloader_train, 
+                                         dataloader_val=dataloader_val, epochs=200)
+# Plot train/validation plot
+plot_train_val(train_losses=train_losses, val_losses=val_losses)
+plt.save('jobs/model1_training.png')
+
+# Save model
+torch.save(model1.state_dict(), 'src/models/saved_models/model1.pt')

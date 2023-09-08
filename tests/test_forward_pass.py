@@ -38,3 +38,9 @@ class test_forward(unittest.TestCase):
         model = LSTMModel2(input_size=2, hidden_size1=3, hidden_size2=3, output_size=1, dropout_prob=0.3, initial_output=0)
         input = torch.tensor(np.ones((5, 7, 2)), dtype=torch.float) # (batch size, timesteps, input size)
         self.assertEqual(tuple(model(input)[0].shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
+    
+    def test_model3(self):
+        """Test shape of LSTM Model 3"""
+        model = LSTMModel3(input_size=2, hidden_size1=3, hidden_size2=3, output_size=1, dropout_prob=0.3, initial_output=0, initial_implied_storage=0)
+        input = torch.tensor(np.ones((5, 7, 2)), dtype=torch.float) # (batch size, timesteps, input size)
+        self.assertEqual(tuple(model(input)[0].shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
