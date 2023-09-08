@@ -16,7 +16,7 @@ an LSTM trained given inflows and the day of the year (DOY) as input will respec
 ## Source Code
 The source code is organized into the following modules: data, models, and tests.
 
-### Source Code: Data
+### Data
 1. The data_fetching submodule reads csv data located in data/USBR/Shasta/ (NOT INCLUDED ON GITHUB) and concatenates data from the requested variales, returning
 a single dataframe.
 2. The data_processing submodule contains the data processing pipeline, which includes conducting a train/val/test split, standardizing the time dependent features
@@ -25,7 +25,7 @@ with the token -1. Missing values are also filled with 0 after the data is stand
 The full pipeline can be accessed using the class processing_pipeline, where the process data method takes the raw 2d data (timesteps, features) and returns PyTorch tensors
 of shape (batches, batch size - e.g. 3 years, features) corresponding the the train/val/test datasets.
 
-### Source Code: Models
+### Models
 1. The model_zoo contains class definitions for PyTorch models used in the project.
 Model 1: a one layer LSTM + 1 layer FF network that takes inflow and DOY as input
 Model 2: the same architecture as Model 1, except the previous predicted release is also an input to the next timestep (autoregressive LSTM)
@@ -42,6 +42,6 @@ an input search space. This is useful for setting grid search.
 5. analyze_lstm_cell supports the interpretation of lstm memory cells. For example, cell_correlations calculates the correlation between memory cell states and an observed state such as storage. plot_cell_storage
 plots the scaled timeseries of memory cells comapred to storage states.
 
-### Source Codes: Tests
-Contains unittests of the experimental process throughout, with a focus on data processing and model shape in the forward pass. To run a unittest, run the command py -m unittest tests.<name of test script>
+### Tests
+Contains unittests of the experimental process throughout, with a focus on data processing and model shape in the forward pass. To run a unittest, run the command py -m unittest tests.(name of test script)
 
