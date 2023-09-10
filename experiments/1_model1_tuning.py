@@ -117,7 +117,7 @@ train_losses, val_losses = training_loop(model=model1, criterion=criterion, opti
                                          dataloader_val=dataloader_val, epochs=200)
 # Plot train/validation plot
 plot_train_val(train_losses=train_losses, val_losses=val_losses)
-plt.save('jobs/model1_training.png')
+plt.savefig('jobs/model1_training.png')
 
 # Save model
 torch.save(model1.state_dict(), 'src/models/saved_models/model1.pt')

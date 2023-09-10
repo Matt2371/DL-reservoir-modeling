@@ -14,7 +14,7 @@ model performance. After the models are trained, we are interested in examining 
 an LSTM trained given inflows and the day of the year (DOY) as input will respect mass balance by learning storage states in its memory cells. 
 
 ## Source Code
-The source code is organized into the following modules: data, models, and tests.
+The source code is organized into two main modules: data and models.
 
 ### Data
 1. The data_fetching submodule reads csv data located in data/USBR/Shasta/ (NOT INCLUDED ON GITHUB) and concatenates data from the requested variales, returning
@@ -42,6 +42,19 @@ an input search space. This is useful for setting grid search.
 5. analyze_lstm_cell supports the interpretation of lstm memory cells. For example, cell_correlations calculates the correlation between memory cell states and an observed state such as storage. plot_cell_storage
 plots the scaled timeseries of memory cells comapred to storage states.
 
-### Tests
+## Tests
 Contains unittests of the experimental process throughout, with a focus on data processing and model shape in the forward pass. To run a unittest, run the command py -m unittest tests.(name of test script)
+
+## Experiments
+The experiments directory contains notebooks and scripts detailing conducted experiements, including model hyperparameter tuning, training, and anlysis:
+1. 1_model1_tuning.py:
+2. 2_model1_analysis.ipynb:
+3. 3_model2_tuning.py:
+4. 4_model2_analysis.ipynb:
+5. 5_model3_tuning.py:
+
+## Setup
+setup.py enables src to be imported throughout the project and installs dependencies after running command 'pip install -e .' in
+the project directory DL-reservoir-modeling/
+
 
