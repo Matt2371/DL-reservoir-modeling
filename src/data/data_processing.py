@@ -25,46 +25,98 @@ def train_val_test(data, train_frac=0.6, val_frac=0.2, test_frac=0.2):
     train, val, test = data[:train_size], data[train_size:train_size+val_size], data[train_size+val_size:]
     return train, val, test
 
-class time_standardizer:
-    """Standardize timeseries data (2darray) using statistics from the training data"""
-    def __init__(self):
-        # statistics are calculated for each feature across all observations and timesteps
-        self.mean = 0
-        self.std = 0
+class time_scaler():
+    """
+    Prepare timeseries data (2darray) for modeling by either:
+    1. Standardize using (mean and std) from the training data
+    2. Normalize (min-max) transform using (min and max) from the traning data
+    """
+    def __init__(self, transform_type='standardize'):
+        """Params: transform_type -- str, 'standardize' or 'min_max'"""
+        # initialize statistics that are calculated for each feature across all training timesteps
+        self.mean = None
+        self.std = None
+        self.min = None
+        self.max = None
+
+        # save setup parameters
+        self.transform_type = transform_type
         self.isfit = False
-    
+        
     def fit(self, train_data):
         """
-        Calculates statistics from the train data to use in standardization
+        Calculates statistics from the train data to use in standardization/normalization
         Params:
         train_data -- 2darray of shape (timesteps, features)
         """
         # use pandas so nan is ignored when calculating summary statistics
         train_data = pd.DataFrame(train_data)
+        # calculate standardizing statistics
+        self.mean = train_data.mean(axis=0).values.reshape(1, -1) # (1, #features)
+        self.std = train_data.std(axis=0).values.reshape(1, -1) # (1, #features)
         # calculate normalizing statistics
-        self.mean = train_data.mean(axis=0).values.reshape(1, -1) # (1, features)
-        self.std = train_data.std(axis=0).values.reshape(1, -1) # (1, features)
+        self.min = train_data.min(axis=0).values.reshape(1, -1) # (1, #features)
+        self.max = train_data.max(axis=0).values.reshape(1, -1) # (1, #features)
         self.isfit = True
         return
     
     def transform(self, data):
         """Transforms the input data after fitting"""
         assert self.isfit == True
-        result = (data - self.mean) / self.std # (timesteps, features)
+        if self.transform_type == 'standardize':
+            result = (data - self.mean) / self.std # (timesteps, features)
+        else:
+            result = (data - self.min) / (self.max - self.min) # (timesteps, features)
         return result
     
     def inverse_transform(self, data):
         """Inverses a transformation"""
         assert self.isfit == True
-        result = data * self.std + self.mean # (timesteps, features)
+        if self.transform_type == 'standardize':
+            result = data * self.std + self.mean # (timesteps, features)
+        else:
+            result = data * (self.max - self.min) + self.min
         return result
     
+class nan_filler():
+    """Class to fill na in the data (2darray of shape timesteps, features)"""
+    def __init__(self, method='mean'):
+        """Params: method -- str, 'mean' (fill with mean from training data) or 'value' (provide custom value to fill na)"""
+        self.method = method
+        # save mean from training data (if filling with mean)
+        self.train_mean = None
+        # custom values (if filling with custom values)\
+        self.values = None
+        return
+    
+    def fill_nan(self, data, **kwargs):
+        """
+        Method to fill nan
+        Params:
+        data -- data with nan of shape (timesteps, features)
+        Optional keyword arguments:
+        training_data -- data (timesteps, features) to calculate mean to fill na with
+        values -- custom values to fill na with
+        """
+        # convert data to pandas df
+        data = pd.DataFrame(data)
 
-def fill_nan(data):
-    """Fill nan with 0: equilvalent to filling na using mean from the training data if data is standardized"""
-    data = pd.DataFrame(data)
-    data.fillna(value=0, inplace=True)
-    return data.values
+        # read key word arguments
+        if 'training_data' in kwargs:
+            training_data = pd.DataFrame(kwargs['training_data'])
+            self.train_mean = training_data.mean(axis=0)
+        if 'values' in kwargs:
+            self.values = kwargs['values']
+
+        if self.method == 'mean':
+            assert self.train_mean is not None # need to provide training data (and calculate mean) if filling with mean
+            assert self.train_mean.shape[0] == data.shape[1] # training data and mean data have same number of dimensions (columns)
+            return data.fillna(value=self.train_mean, inplace=False).values
+
+        if self.method == 'value':
+            assert self.values is not None # need to provide values if filling with custom values
+            return data.fillna(value=self.values, inplace=False).values
+
 
 def split_and_pad(data, chunk_size=3*365, pad_value=-1, pad_nan=False):
     """
@@ -86,7 +138,7 @@ def split_and_pad(data, chunk_size=3*365, pad_value=-1, pad_nan=False):
     # Pad each chunk so that they are the same size
     data_new = pad_sequence(data_splits, batch_first=True, padding_value=pad_value).to(torch.float) 
 
-    # Pad nan
+    # Pad nan (default = False)
     if pad_nan:
         data_new[data_new.isnan()] = pad_value
 
@@ -97,16 +149,19 @@ class processing_pipeline():
     Pipeline for processing data:
     1. Split data into train/val/test sets
     2. Standardize the data using the training set
-    3. Fill nan with 0 (equivalent to filling with mean from train data)
+    3. Fill nan using mean from train data
     4. Convert data to Pytorch tensors
     5. Split data into chunks and pad the remainder
     """
-    def __init__(self, train_frac=0.6, val_frac=0.2, test_frac=0.2, chunk_size=3*365, pad_value=-1):
+    def __init__(self, train_frac=0.6, val_frac=0.2, test_frac=0.2, chunk_size=3*365, 
+                 pad_value=-1, transform_type='standardize', fill_na_method='mean'):
         """ 
         Params:
         train_frac, val_frac, test_frac -- fractions to partition train/val/test split
         chunk_size -- size of each chunk when splitting data
         pad_value -- value to pad the remainder after splitting data into chunks
+        transform_type -- str, type of pre-transformation 'standardize' or 'normalize'
+        fill_na_method -- str, method to fill nan 'mean' or 'values'
         """
         # save pipeline parameters
         self.train_frac = train_frac
@@ -114,9 +169,13 @@ class processing_pipeline():
         self.test_frac = test_frac
         self.chunk_size = chunk_size
         self.pad_value = pad_value
+        self.transform_type = transform_type
+        self.fill_na_method = fill_na_method
 
         # instantiate scaler object
-        self.scaler = time_standardizer() 
+        self.scaler = time_scaler(transform_type=self.transform_type)
+        # instantiate nan filler object
+        self.filler = nan_filler(method=self.fill_na_method)
 
     def process_data(self, data):
         """
@@ -127,9 +186,11 @@ class processing_pipeline():
         df_train, df_val, df_test = train_val_test(data=data, train_frac=self.train_frac, val_frac=self.val_frac, test_frac=self.test_frac)
         # 2. Standardize the data using the training set
         self.scaler.fit(df_train)
-        df_train, df_val, df_test = self.scaler.transform(df_train), self.scaler.transform(df_val), self.scaler.transform(df_test)
+        df_train, df_val, df_test = (self.scaler.transform(df_train), self.scaler.transform(df_val), 
+                                     self.scaler.transform(df_test))
         # 3. Fill nan with 0 (equivalent to filling with mean from train data)
-        df_train, df_val, df_test = fill_nan(df_train), fill_nan(df_val), fill_nan(df_test)
+        df_train, df_val, df_test = (self.filler.fill_nan(data=df_train, training_data=df_train), 
+                                     self.filler.fill_nan(df_val, training_data=df_train), self.filler.fill_nan(df_test, training_data=df_train))
         # 4. Convert data to PyTorch tensors (from numpy array)
         ts_train, ts_val, ts_test = torch.tensor(df_train, dtype=torch.float), torch.tensor(df_val, dtype=torch.float), torch.tensor(df_test, dtype=torch.float)
         # 5. Split data into chunks and pad the remainder (for training and validation sets)
