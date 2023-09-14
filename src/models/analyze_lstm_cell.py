@@ -26,7 +26,7 @@ def cell_correlations(cell_states, storage_states):
 
     return correlations
 
-def plot_storage_cell(cell_states_all, storage_states, cell_id, ax):
+def plot_storage_cell(cell_states_all, storage_states, cell_id, ax, transform_type='standardize'):
     """ 
     Plot timeseries of particular cell state vs storage states.
     Params:
@@ -34,6 +34,7 @@ def plot_storage_cell(cell_states_all, storage_states, cell_id, ax):
     storage_states -- numpy 1D array, series of storage states to compare cell states with (timesteps, )
     cell_id -- int, which cell unit to plot
     ax -- matplotlib axes to plot on
+    transform_type -- str, 'standardize' or 'normalize.' How to scale storage/cell states
     """
 
     # Cell states: combine chunks and convert to numpy
@@ -49,8 +50,14 @@ def plot_storage_cell(cell_states_all, storage_states, cell_id, ax):
 
 
     # Scale series
-    x = (x - x[~np.isnan(x)].mean()) / x[~np.isnan(x)].std()
-    y = (y - y[~np.isnan(y)].mean()) / y[~np.isnan(y)].std()
+    if transform_type == 'standardize':
+        x = (x - x[~np.isnan(x)].mean()) / x[~np.isnan(x)].std()
+        y = (y - y[~np.isnan(y)].mean()) / y[~np.isnan(y)].std()
+    elif transform_type == 'normalize':
+        x = (x - x[~np.isnan(x)].min()) / (x[~np.isnan(x)].max() - x[~np.isnan(x)].min())
+        y = (y - y[~np.isnan(y)].min()) / (y[~np.isnan(y)].max() - y[~np.isnan(y)].min())
+    else:
+        raise Exception("Transform_type must be 'standardize' or 'normalize'")
 
     # Plot
     ax.plot(y, label=f'observed storage')

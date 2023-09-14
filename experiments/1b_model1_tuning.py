@@ -1,5 +1,8 @@
-#### Conduct grid search to tune hyperparameters of model 1 on Shasta data (1944-2022) ####
-#### Also trains and saves optimal model ####
+#### CONDUCT GRID SEARCH TO TUNE HYPERPARAMETERS OF -- MODEL 1 (b)  -- ON SHASTA DATA (1944-2022) ####
+#### DATA PROCESSING: NORMALIZED (MIN_MAX), FILL NAN WITH TRAINING MEAN
+#### LOSS FUNCTION: MSE LOSS
+#### INPUTS: INFLOW, DOY
+#### ALSO TRAINS AND SAVES OPTIMAL MODEL ####
 
 import pandas as pd
 import numpy as np
@@ -21,7 +24,7 @@ df['doy'] = df.index.to_series().dt.dayofyear
 df = df['1944-01-01':'2022-12-31'].copy()
 
 # Run data processing pipeline
-pipeline = processing_pipeline(train_frac=0.6, val_frac=0.2, test_frac=0.2, chunk_size=3*365, pad_value=-1)
+pipeline = processing_pipeline(train_frac=0.6, val_frac=0.2, test_frac=0.2, chunk_size=3*365, pad_value=-1, transform_type='normalize', fill_na_method='mean')
 # Train and val of shape (#chunks, chunksize, [inflow, outflow, storage, doy]), test of shape (timesteps, [inflow, outflow, storage, doy])
 ts_train, ts_val, ts_test = pipeline.process_data(df) 
 
@@ -68,26 +71,26 @@ for i in range(grid.shape[0]):
 
     # Instantiate model
     torch.manual_seed(random_seed)
-    model1_tune = LSTMModel1_opt(input_size=input_size, hidden_size1=hidden_size1, 
+    model1b_tune = LSTMModel1_opt(input_size=input_size, hidden_size1=hidden_size1, 
                              hidden_size2=hidden_size2, output_size=output_size, num_layers=num_layers, dropout_prob=dropout_prob)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model1_tune.parameters(), lr=0.001)
+    optimizer = optim.Adam(model1b_tune.parameters(), lr=0.001)
 
     # Run training loop and get validation error
-    train_losses, val_losses = training_loop(model=model1_tune, criterion=criterion, optimizer=optimizer, 
-                                             patience=10, dataloader_train=dataloader_train, dataloader_val=dataloader_val, epochs=200)
+    train_losses, val_losses = training_loop(model=model1b_tune, criterion=criterion, optimizer=optimizer, 
+                                             patience=10, dataloader_train=dataloader_train, dataloader_val=dataloader_val, epochs=300)
     
     # Update results
     results['epochs_trained'].iloc[i] = len(val_losses)
     results['val_error'].iloc[i] = val_losses[-1]
 
 # Save results
-results.to_csv('report/results/hyperparameter_tuning/model1_tuning.csv')
+results.to_csv('report/results/hyperparameter_tuning/model1b_tuning.csv')
 
 ## Train model with optimal hyperparameters and save
 # Find optimal hyperparameters
 # Load in results from grid search
-grid_df = pd.read_csv('report/results/hyperparameter_tuning/model1_tuning.csv', index_col=0)
+grid_df = pd.read_csv('report/results/hyperparameter_tuning/model1b_tuning.csv', index_col=0)
 # Average performance over the random seeds
 num_random_seeds = 5
 grid_df['param_id'] = np.repeat(np.arange(int(len(grid_df) / num_random_seeds)), num_random_seeds)
@@ -95,7 +98,7 @@ grid_df_mean = grid_df.groupby('param_id').mean()
 grid_df_mean.drop(columns=['random_seed'], inplace=True)
 # Save sorted df
 grid_df_mean.sort_values(by=['val_error'], axis=0, inplace=True)
-grid_df_mean.to_csv('report/results/hyperparameter_tuning/model1_avg_tuning.csv')
+grid_df_mean.to_csv('report/results/hyperparameter_tuning/model1b_avg_tuning.csv')
 
 # Instantiate optiamal model
 input_size = 2
@@ -106,18 +109,18 @@ dropout_prob = grid_df_mean.iloc[0].dropout
 num_layers = int(grid_df_mean.iloc[0].num_layers)
 
 torch.manual_seed(0)
-model1 = LSTMModel1(input_size=input_size, hidden_size1=hidden_size1, 
+model1b = LSTMModel1(input_size=input_size, hidden_size1=hidden_size1, 
                              hidden_size2=hidden_size2, output_size=output_size, dropout_prob=dropout_prob)
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model1.parameters(), lr=0.001)
+optimizer = optim.Adam(model1b.parameters(), lr=0.001)
 
 # Run training loop
-train_losses, val_losses = training_loop(model=model1, criterion=criterion, optimizer=optimizer, 
+train_losses, val_losses = training_loop(model=model1b, criterion=criterion, optimizer=optimizer, 
                                          patience=10, dataloader_train=dataloader_train, 
-                                         dataloader_val=dataloader_val, epochs=200)
+                                         dataloader_val=dataloader_val, epochs=300)
 # Plot train/validation plot
 plot_train_val(train_losses=train_losses, val_losses=val_losses)
-plt.savefig('jobs/model1_training.png')
+plt.savefig('jobs/model1b_training.png')
 
 # Save model
-torch.save(model1.state_dict(), 'src/models/saved_models/model1.pt')
+torch.save(model1b.state_dict(), 'src/models/saved_models/model1b.pt')

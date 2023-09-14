@@ -37,6 +37,7 @@ def lstm_unroll(lstm_cell, hidden_size, input):
     return output, cell_states
 
 
+### FIXME: DEVELOP SUPPORT FOR MULTILAYER LSTM
 class LSTMModel1(nn.Module):
     """Model 1: 1 layer LSTM + 1 layer NN with dropout. Forward pass returns sequence of hidden AND cell states.
     Uses manual lstm_unroll()"""

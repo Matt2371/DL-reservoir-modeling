@@ -42,6 +42,8 @@ an input search space. This is useful for setting grid search.
 5. analyze_lstm_cell supports the interpretation of lstm memory cells. For example, cell_correlations calculates the correlation between memory cell states and an observed state such as storage. plot_cell_storage
 plots the scaled timeseries of memory cells comapred to storage states.
 
+6. custom_loss defines custom loss functions in PyTorch
+
 ## Tests
 Contains unittests of the experimental process throughout, with a focus on data processing and model shape in the forward pass. To run a unittest, run the command py -m unittest tests.(name of test script)
 

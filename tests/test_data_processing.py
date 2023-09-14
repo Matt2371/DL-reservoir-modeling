@@ -41,7 +41,7 @@ class test_data_processing(unittest.TestCase):
         expected = np.hstack([(np.array([1, 1, 5]).reshape(-1, 1) - 1) / (5 - 1),
                              (np.array([10, 12, 11]).reshape(-1, 1) - 10) / (12 - 10)])
         
-        scaler = time_scaler(transform_type='min_max')
+        scaler = time_scaler(transform_type='normalize')
         scaler.fit(input)
         # test transform
         np.testing.assert_almost_equal(scaler.transform(input), expected)

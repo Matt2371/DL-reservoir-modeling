@@ -32,7 +32,7 @@ class time_scaler():
     2. Normalize (min-max) transform using (min and max) from the traning data
     """
     def __init__(self, transform_type='standardize'):
-        """Params: transform_type -- str, 'standardize' or 'min_max'"""
+        """Params: transform_type -- str, 'standardize' or 'normalize'"""
         # initialize statistics that are calculated for each feature across all training timesteps
         self.mean = None
         self.std = None
@@ -65,8 +65,10 @@ class time_scaler():
         assert self.isfit == True
         if self.transform_type == 'standardize':
             result = (data - self.mean) / self.std # (timesteps, features)
-        else:
+        elif self.transform_type == 'normalize':
             result = (data - self.min) / (self.max - self.min) # (timesteps, features)
+        else:
+            raise Exception("transform_type must be 'standardize' or 'normalize'")
         return result
     
     def inverse_transform(self, data):
@@ -74,8 +76,10 @@ class time_scaler():
         assert self.isfit == True
         if self.transform_type == 'standardize':
             result = data * self.std + self.mean # (timesteps, features)
-        else:
+        elif self.transform_type == 'normalize':
             result = data * (self.max - self.min) + self.min
+        else:
+            raise Exception("transform_type must be 'standardize' or 'normalize'")    
         return result
     
 class nan_filler():
@@ -95,8 +99,8 @@ class nan_filler():
         Params:
         data -- data with nan of shape (timesteps, features)
         Optional keyword arguments:
-        training_data -- data (timesteps, features) to calculate mean to fill na with
-        values -- custom values to fill na with
+        training_data -- data (timesteps, features). MUST PROVIDE if method = 'mean'
+        values -- custom values to fill na with. MUST PROVIDE if method = 'value'
         """
         # convert data to pandas df
         data = pd.DataFrame(data)
@@ -113,9 +117,12 @@ class nan_filler():
             assert self.train_mean.shape[0] == data.shape[1] # training data and mean data have same number of dimensions (columns)
             return data.fillna(value=self.train_mean, inplace=False).values
 
-        if self.method == 'value':
+        elif self.method == 'value':
             assert self.values is not None # need to provide values if filling with custom values
             return data.fillna(value=self.values, inplace=False).values
+        
+        else:
+            raise Exception("method must be 'mean' or 'value'")
 
 
 def split_and_pad(data, chunk_size=3*365, pad_value=-1, pad_nan=False):
@@ -161,7 +168,7 @@ class processing_pipeline():
         chunk_size -- size of each chunk when splitting data
         pad_value -- value to pad the remainder after splitting data into chunks
         transform_type -- str, type of pre-transformation 'standardize' or 'normalize'
-        fill_na_method -- str, method to fill nan 'mean' or 'values'
+        fill_na_method -- str, method to fill nan 'mean' or 'values'. *CURRENTLY ONLY SUPPORTS 'mean'
         """
         # save pipeline parameters
         self.train_frac = train_frac
