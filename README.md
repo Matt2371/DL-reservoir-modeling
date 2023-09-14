@@ -19,16 +19,19 @@ The source code is organized into two main modules: data and models.
 ### Data
 1. The data_fetching submodule reads csv data located in data/USBR/Shasta/ (NOT INCLUDED ON GITHUB) and concatenates data from the requested variales, returning
 a single dataframe.
-2. The data_processing submodule contains the data processing pipeline, which includes conducting a train/val/test split, standardizing the time dependent features
-based on the mean and standard deviation of the training data, splitting the data into batches of 3 years long (for more stable training), and padding the remainder
-with the token -1. Missing values are also filled with 0 after the data is standardized, which is equivalent to filling missing values with the mean from the training set.
+2. The data_processing submodule contains the data processing pipeline, which includes conducting a train/val/test split, standardizing or normalizing (min-max transform) the time dependent features based on statistics from the training data, splitting the data into batches of 3 years long (for more stable training), and padding the remainder
+with the token -1. Missing values are also filled with the mean from the training set after the data is transformed.
 The full pipeline can be accessed using the class processing_pipeline, where the process data method takes the raw 2d data (timesteps, features) and returns PyTorch tensors
 of shape (batches, batch size - e.g. 3 years, features) corresponding the the train/val/test datasets.
 
 ### Models
 1. The model_zoo contains class definitions for PyTorch models used in the project.\
-Model 1: a one layer LSTM + 1 layer FF network that takes inflow and DOY as input\
+Model 1a: LSTM + 1 layer FF network that takes inflow and DOY as input. Data is standardized. Trained on MSE\
+Model 1b: LSTM + 1 layer FF network that takes inflow and DOY as input. Data is normalized. Trained on MSE\
+Model 1c: LSTM + 1 layer FF network that takes inflow and DOY as input. Data is normalized. Trained on RMSLE (root mean square logarithmic loss)\
 Model 2: the same architecture as Model 1, except the previous predicted release is also an input to the next timestep (autoregressive LSTM)
+Model 3: LSTM + 1 layer FF. Takes inflow and DOY as input. Maintains an implied storage variable (used as input) based on previous implied storage,
+previous release, and current inflow. Data is standardized. Trained on MSE.
 
 2. The train_model submodule defines functions and classes for masking padded values from the loss function, implementing early stopping (applied by default), and conducting the training loop. The full
 training loop can be accessed using the training_loop function, given the PyTorch model, optimizer, and criterion (e.g. MSE loss), and the desired patience for the early stopper.
