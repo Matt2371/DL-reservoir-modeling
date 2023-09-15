@@ -27,11 +27,22 @@ class test_forward(unittest.TestCase):
         self.assertEqual(tuple(dummy_model(input)[0].shape), (5, 7, 3)) # expected output shape is (batch size, timesteps, output size)
         return
 
-    def test_model1(self):
-        """Test shape of LSTM Model 1"""
-        model = LSTMModel1_opt(input_size=2, hidden_size1=3, hidden_size2=3, dropout_prob=0.3, output_size=1)
+    def test_model1_opt(self):
+        """Test shape of LSTM Model 1 (using default LSTM() layers)"""
+        model = LSTMModel1_opt(input_size=2, hidden_size1=3, hidden_size2=4, output_size=1, num_layers=2, dropout_prob=0.3)
         input = torch.tensor(np.ones((5, 7, 2)), dtype=torch.float) # (batch size, timesteps, input size)
         self.assertEqual(tuple(model(input)[0].shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
+    
+    def test_model1(self):
+        """Test shape of LSTM Model 1 (using manuall lstm_unroll)"""
+        model = LSTMModel1(input_size=2, hidden_size1=3, hidden_size2=4, output_size=1, num_layers=2, dropout_prob=0.3)
+        input = torch.tensor(np.ones((5, 7, 2)), dtype=torch.float) # (batch size, timesteps, input size)
+        output, (hidden_list, cell_list) = model(input)
+        # check output shape
+        self.assertEqual(tuple(output.shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
+        # check cell states shape
+        self.assertEqual(len(cell_list), 2) # check cell lists contains cell states for 2 layers
+        self.assertEqual(tuple(cell_list[-1].shape), (5, 7, 3)) # expected cell states shape (for one layer) is (batch size, timesteps, hidden_size1)
     
     def test_model2(self):
         """Test shape of LSTM Model 2"""

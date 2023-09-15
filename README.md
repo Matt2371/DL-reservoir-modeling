@@ -37,7 +37,7 @@ previous release, and current inflow. Data is standardized. Trained on MSE.
 training loop can be accessed using the training_loop function, given the PyTorch model, optimizer, and criterion (e.g. MSE loss), and the desired patience for the early stopper.
 
 3. The predict_model submodule contains functions and classes that support the use of models in making predictions/inferences. Notably, the flatten_rm_pad() function flattens the model output
-of shape (# batches, timesteps, 1) into a 1d array, with padded values (previously to fill the remainder when splitting data into chunks) removed.
+of shape (# batches, timesteps, 1) into a 1d array, with padded values (previously to fill the remainder when splitting data into chunks) removed, making it easier to plot or conduct analysis.
 
 4. hyperparameter_tuning contains functions that support the hyperparameter tuning of the model. Notably, the exhaustive_grid function returns a dataframe of all possible hyperparameter combinations given
 an input search space. This is useful for setting grid search.
