@@ -23,7 +23,7 @@ from src.models.custom_loss import RMSLELoss
 
 ## DATA PROCESSING ##
 
-def data_processing_1c(name='Shasta', transform_type='normalize'):
+def data_processing_1c(name, transform_type):
     """
     Run data processing pipeline. Return Dataloader objects for training and validation data
     Params:

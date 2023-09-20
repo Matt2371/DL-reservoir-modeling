@@ -38,6 +38,7 @@ class test_forward(unittest.TestCase):
         model = LSTMModel1(input_size=2, hidden_size1=3, hidden_size2=4, output_size=1, num_layers=2, dropout_prob=0.3)
         input = torch.tensor(np.ones((5, 7, 2)), dtype=torch.float) # (batch size, timesteps, input size)
         output, (hidden_list, cell_list) = model(input)
+
         # check output shape
         self.assertEqual(tuple(output.shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
         # check cell states shape
@@ -46,12 +47,21 @@ class test_forward(unittest.TestCase):
     
     def test_model2(self):
         """Test shape of LSTM Model 2"""
-        model = LSTMModel2(input_size=2, hidden_size1=3, hidden_size2=3, output_size=1, dropout_prob=0.3, initial_output=0)
+        model = LSTMModel2(input_size=2, hidden_size1=3, hidden_size2=3, output_size=1, num_layers=2, dropout_prob=0.3, initial_output=0)
         input = torch.tensor(np.ones((5, 7, 2)), dtype=torch.float) # (batch size, timesteps, input size)
-        self.assertEqual(tuple(model(input)[0].shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
+        output, (hidden_list, cell_list) = model(input)
+
+        # check output shape
+        self.assertEqual(tuple(output.shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
+        # check cell states shape
+        self.assertEqual(len(cell_list), 2) # check cell lists contains cell states for 2 layers
+        self.assertEqual(tuple(cell_list[-1].shape), (5, 7, 3)) # expected cell states shape (for one layer) is (batch size, timesteps, hidden_size1)
     
     def test_model3(self):
         """Test shape of LSTM Model 3"""
-        model = LSTMModel3(input_size=2, hidden_size1=3, hidden_size2=3, output_size=1, dropout_prob=0.3, initial_output=0, initial_implied_storage=0)
+        model = LSTMModel3(input_size=2, hidden_size1=3, hidden_size2=3, output_size=1, num_layers=2, dropout_prob=0.3, initial_output=0, initial_implied_storage=0)
         input = torch.tensor(np.ones((5, 7, 2)), dtype=torch.float) # (batch size, timesteps, input size)
-        self.assertEqual(tuple(model(input)[0].shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)
+        output, implied_storages = model(input)
+
+        # check output shape
+        self.assertEqual(tuple(output.shape), (5, 7, 1)) # expected output shape is (batch size, timesteps, output size)

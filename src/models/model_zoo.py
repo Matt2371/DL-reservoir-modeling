@@ -131,17 +131,18 @@ class LSTMModel1_opt(nn.Module):
 ### FIXME: DEVELOP SUPPORT FOR MULTILAYER LSTM
 class LSTMModel2(nn.Module):
     """
-    Model 2: (autoregressive) 1 layer LSTM + 1 layer NN with dropout - predictions from previous timestep are
+    Model 2: (autoregressive) 1 OR 2 layer LSTM + 1 layer NN with dropout - predictions from previous timestep are
     fed back in as input for the next timestep. Forward pass returns sequence of outputs AND cell states.
     (uses manual lstm_unroll())
     """
-    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, dropout_prob, initial_output=0):
+    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, num_layers, dropout_prob, initial_output=0):
         """
         Params:
         input_size -- # of features in input (EXCLUDING autoregressive input)
         hidden_size1 -- # of hidden units in LSTM
         hidden_size2 -- # of hidden units in Feedforward
         output_size -- # of features in output
+        num_layers -- # of LSTM layers (CURRENTLY ONLY SUPPORTS ONE OR TWO LAYERS)
         dropout_prob -- dropout probability for dropout layers
         initial_output -- initialize "previous" output for first timestep
         """
@@ -149,7 +150,10 @@ class LSTMModel2(nn.Module):
         self.inital_output = initial_output
         self.hidden_size1 = hidden_size1
         self.hidden_size2 = hidden_size2
-        self.lstm_cell = nn.LSTMCell(input_size + 1, self.hidden_size1) # + 1 to account for prev output
+        self.num_layers = num_layers
+
+        self.lstm_cell1 = nn.LSTMCell(input_size + 1, self.hidden_size1) # first lstm layer, input_size + 1 to account for prev output
+        self.lstm_cell2 = nn.LSTMCell(self.hidden_size1, self.hidden_size1) # second lstm layer (OPTIONALLY USED)
         self.dropout1 = nn.Dropout(dropout_prob)
         self.linear1 = nn.Linear(hidden_size1, hidden_size2)
         self.relu1 = nn.ReLU()
@@ -157,27 +161,51 @@ class LSTMModel2(nn.Module):
         self.linear2 = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
+        """
+        Run the forward pass.
+        Params:
+        x -- model input of shape (batch size, timesteps, input_size)
+        Returns:
+        out -- model output of shape (batch size, timesteps, output_size)
+        (hidden_state_list, cell_state_list) -- lists of model hidden and cell states for each layer, each of shape (batch size, timestpes, hidden_size)
+        """
+
         # get dimensions
         N, L, Hin = x.shape # input shape is (batch size, timesteps, input size)
-        # initialize hidden, cell states
-        hx, cx = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
+        # initialize hidden, cell states for lstmcell (layer 2 is optionally used)
+        hx_1, cx_1 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
+        hx_2, cx_2 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
 
-        hidden_states = [] # store sequence of hidden states
-        cell_states = [] # store sequence of cell states
+        hidden_states_1 = [] # store sequence of hidden states for layer 1
+        cell_states_1 = [] # store sequence of cell states for layer 1
+        hidden_states_2 = [] # store sequence of hidden states for layer 2
+        cell_states_2 = [] # store sequence of cell states for layer 2
         output = [] # store predictions
-        prev_output = self.inital_output * torch.ones((N, 1)) # initialize previous output (batch size, output size)
+
+        # initialize previous output (batch size, output size)
+        prev_output = self.inital_output * torch.ones((N, 1)) 
 
         for i in range(L):
             # append previous output to input of current timestep: (batch size, input size) -> (batch size, input size + 1)
             input_i = torch.cat([x[:, i, :], prev_output], dim=-1)
-            hx, cx = self.lstm_cell(input_i, (hx, cx)) # hx, cx is of shape (batch size, hidden size 1)
+            hx_1, cx_1 = self.lstm_cell1(input_i, (hx_1, cx_1)) # hx, cx is of shape (batch size, hidden size 1)
+            # save hidden and cell states for first layer
+            hidden_states_1.append(hx_1)
+            cell_states_1.append(cx_1)
 
-            # save hidden and cell states
-            hidden_states.append(hx)
-            cell_states.append(cx)
+            # pass through second LSTMCell num_layers == 2 (not 1)
+            if self.num_layers == 2:
+                hx_2, cx_2 = self.lstm_cell2(hx_1, (hx_2, cx_2))
+                # save hidden and cell states for first layer
+                hidden_states_2.append(hx_2)
+                cell_states_2.append(cx_2)
+
+                out = hx_2
+            else:
+                out = hx_1    
 
             # add feedforward layers to get output
-            out = self.dropout1(hx) # (batch size, hidden size 1)
+            out = self.dropout1(out) # (batch size, hidden size 1)
             out = self.linear1(out) # (batch size, hidden size 2)
             out = self.relu1(out)
             out = self.dropout2(out)
@@ -188,25 +216,38 @@ class LSTMModel2(nn.Module):
             prev_output = out
     
         # concatenate results along new dimension (create timesteps dimension at dim=1)
-        hidden_states = torch.stack(hidden_states, dim=1) # (batch, timesteps, hidden size1)
-        cell_states = torch.stack(cell_states, dim=1) # (batch, timesteps, hidden size1)
+        hidden_states_1 = torch.stack(hidden_states_1, dim=1) # (batch, timesteps, hidden size1)
+        cell_states_1 = torch.stack(cell_states_1, dim=1) # (batch, timesteps, hidden size1)
         output = torch.stack(output, dim=1) # (batch, timesteps, output size)
 
-        return output, cell_states
+        if self.num_layers == 2:
+            hidden_states_2 = torch.stack(hidden_states_2, dim=1) # (batch, timesteps, hidden size1)
+            cell_states_2 = torch.stack(cell_states_2, dim=1) # (batch, timesteps, hidden size1)
+            
+            # package output hidden/cell states
+            hidden_state_list = [hidden_states_1, hidden_states_2]
+            cell_state_list = [cell_states_1, cell_states_2]
+        else:
+            hidden_state_list = [hidden_states_1]
+            cell_state_list = [cell_states_1]
+
+        return output, (hidden_state_list, cell_state_list)
 
 ### FIXME: DEVELOP SUPPORT FOR MULTILAYER LSTM
 class LSTMModel3(nn.Module):
     """
     Model 3: 1 layer LSTM + 1 layer NN with dropout - also inputs inplied storage (prev implied storage + current inflow - prev predicted outflow).
+    Requires the first input to be inflow.
     Forward pass returns sequence of hidden AND implied storages (uses manual lstm_unroll())
     """
-    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, dropout_prob, initial_output=0, initial_implied_storage=0):
+    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, num_layers, dropout_prob, initial_output=0, initial_implied_storage=0):
         """
         Params:
         input_size -- # of features in input (EXCLUDING implied storage)
         hidden_size1 -- # of hidden units in LSTM
         hidden_size2 -- # of hidden units in Feedforward
         output_size -- # of features in output
+        num_layers -- # of LSTM layers (CURRENTLY ONLY SUPPORTS 1 OR 2 LAYERS)
         dropout_prob -- dropout probability for dropout layers
         initial_output -- initialize "previous" output for first timestep
         initial_implied_storage -- initialize "previous" implied storage for first timestep
@@ -216,7 +257,11 @@ class LSTMModel3(nn.Module):
         self.initial_implied_storage = initial_implied_storage
         self.hidden_size1 = hidden_size1
         self.hidden_size2 = hidden_size2
-        self.lstm_cell = nn.LSTMCell(input_size + 1, self.hidden_size1) # + 1 to account for prev output
+        self.num_layers = num_layers
+
+        self.lstm_cell1 = nn.LSTMCell(input_size + 1, self.hidden_size1) # first lstm layer, input_size + 1 to account for prev output
+        self.lstm_cell2 = nn.LSTMCell(self.hidden_size1, self.hidden_size1) # second lstm layer (OPTIONALLY USED)
+
         self.dropout1 = nn.Dropout(dropout_prob)
         self.linear1 = nn.Linear(hidden_size1, hidden_size2)
         self.relu1 = nn.ReLU()
@@ -224,13 +269,25 @@ class LSTMModel3(nn.Module):
         self.linear2 = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
+        """
+        Run the forward pass.
+        Params:
+        x -- model input of shape (batch size, timesteps, input_size)
+        Returns:
+        out -- model output of shape (batch size, timesteps, output_size)
+        (hidden_state_list, cell_state_list) -- lists of model hidden and cell states for each layer, each of shape (batch size, timestpes, hidden_size)
+        """
         # get dimensions
         N, L, Hin = x.shape # input shape is (batch size, timesteps, input size)
         # initialize hidden, cell states
-        hx, cx = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
+        # initialize hidden, cell states for lstmcell (layer 2 is optionally used)
+        hx_1, cx_1 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
+        hx_2, cx_2 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
 
-        hidden_states = [] # store sequence of hidden states
-        cell_states = [] # store sequence of cell states
+        hidden_states_1 = [] # store sequence of hidden states for layer 1
+        cell_states_1 = [] # store sequence of cell states for layer 1
+        hidden_states_2 = [] # store sequence of hidden states for layer 2
+        cell_states_2 = [] # store sequence of cell states for layer 2
         implied_storages = [] # store sequence of implied storages
         output = [] # store predictions
         prev_output = self.inital_output * torch.ones((N, 1)) # initialize previous output (batch size, output size=1)
@@ -239,17 +296,30 @@ class LSTMModel3(nn.Module):
         for i in range(L):
             # calculate current implied storage: prev storage + current inflow - prev output
             current_implied_storage = prev_implied_storage + x[:, i, [0]] - prev_output
-            # append previous implied storage to input of current timestep: (batch size, input size) -> (batch size, input size + 1)
-            input_i = torch.cat([x[:, i, :], current_implied_storage], dim=-1)
-            hx, cx = self.lstm_cell(input_i, (hx, cx)) # hx, cx is of shape (batch size, hidden size 1)
-
-            # save hidden and cell states, implied storage
-            hidden_states.append(hx)
-            cell_states.append(cx)
+            # save current implied storage
             implied_storages.append(current_implied_storage)
 
+            # append previous implied storage to input of current timestep: (batch size, input size) -> (batch size, input size + 1)
+            input_i = torch.cat([x[:, i, :], current_implied_storage], dim=-1)
+            # pass through first lstm layer
+            hx_1, cx_1 = self.lstm_cell1(input_i, (hx_1, cx_1)) # hx, cx is of shape (batch size, hidden size 1)
+            # save hidden and cell states from layer 1
+            hidden_states_1.append(hx_1)
+            cell_states_1.append(cx_1)
+
+            # pass through second LSTMCell num_layers == 2 (not 1)
+            if self.num_layers == 2:
+                hx_2, cx_2 = self.lstm_cell2(hx_1, (hx_2, cx_2))
+                # save hidden and cell states for first layer
+                hidden_states_2.append(hx_2)
+                cell_states_2.append(cx_2)
+
+                out = hx_2
+            else:
+                out = hx_1 
+
             # add feedforward layers to get output
-            out = self.dropout1(hx) # (batch size, hidden size 1)
+            out = self.dropout1(out) # (batch size, hidden size 1)
             out = self.linear1(out) # (batch size, hidden size 2)
             out = self.relu1(out)
             out = self.dropout2(out)
@@ -261,9 +331,20 @@ class LSTMModel3(nn.Module):
             prev_implied_storage = current_implied_storage
     
         # concatenate results along new dimension (create timesteps dimension at dim=1)
-        hidden_states = torch.stack(hidden_states, dim=1) # (batch, timesteps, hidden size1)
-        cell_states = torch.stack(cell_states, dim=1) # (batch, timesteps, hidden size1)
-        implied_storages = torch.stack(implied_storages, dim=1) # (batch, timesteps, output size = 1)
-        output = torch.stack(output, dim=1) # (batch, timesteps, output size = 1)
+        hidden_states_1 = torch.stack(hidden_states_1, dim=1) # (batch, timesteps, hidden size1)
+        cell_states_1 = torch.stack(cell_states_1, dim=1) # (batch, timesteps, hidden size1)
+        output = torch.stack(output, dim=1) # (batch, timesteps, output size)
+        implied_storages = torch.stack(implied_storages, dim=1) # (batch, timesteps, 1)
+
+        if self.num_layers == 2:
+            hidden_states_2 = torch.stack(hidden_states_2, dim=1) # (batch, timesteps, hidden size1)
+            cell_states_2 = torch.stack(cell_states_2, dim=1) # (batch, timesteps, hidden size1)
+            
+            # package hidden/cell states
+            hidden_state_list = [hidden_states_1, hidden_states_2]
+            cell_state_list = [cell_states_1, cell_states_2]
+        else:
+            hidden_state_list = [hidden_states_1]
+            cell_state_list = [cell_states_1]
 
         return output, implied_storages

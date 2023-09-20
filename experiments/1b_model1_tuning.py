@@ -22,7 +22,7 @@ from src.models.hyperparameter_tuning import *
 
 ## DATA PROCESSING ##
 
-def data_processing_1b(name='Shasta', transform_type='normalize'):
+def data_processing_1b(name, transform_type):
     """
     Run data processing pipeline. Return Dataloader objects for training and validation data
     Params:

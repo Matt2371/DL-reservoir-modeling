@@ -191,7 +191,7 @@ class processing_pipeline():
         """
         # 1. Split into training/validation/testing sets
         df_train, df_val, df_test = train_val_test(data=data, train_frac=self.train_frac, val_frac=self.val_frac, test_frac=self.test_frac)
-        # 2. Standardize the data using the training set
+        # 2. Scale the data using the training set
         self.scaler.fit(df_train)
         df_train, df_val, df_test = (self.scaler.transform(df_train), self.scaler.transform(df_val), 
                                      self.scaler.transform(df_test))
