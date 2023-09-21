@@ -128,7 +128,6 @@ class LSTMModel1_opt(nn.Module):
         out = self.linear2(out) # (batch size, timesteps, output size)
         return out, (h_n, c_n)
 
-### FIXME: DEVELOP SUPPORT FOR MULTILAYER LSTM
 class LSTMModel2(nn.Module):
     """
     Model 2: (autoregressive) 1 OR 2 layer LSTM + 1 layer NN with dropout - predictions from previous timestep are
@@ -233,7 +232,6 @@ class LSTMModel2(nn.Module):
 
         return output, (hidden_state_list, cell_state_list)
 
-### FIXME: DEVELOP SUPPORT FOR MULTILAYER LSTM
 class LSTMModel3(nn.Module):
     """
     Model 3: 1 layer LSTM + 1 layer NN with dropout - also inputs inplied storage (prev implied storage + current inflow - prev predicted outflow).

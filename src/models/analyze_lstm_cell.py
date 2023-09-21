@@ -1,6 +1,18 @@
 ### FUNCTIONS AND CLASSES TO HELP ANALYZE THE RELATIONSHIP BETWEEN LSTM CELL STATES AND OBSERVED MASS STATES ###
 import numpy as np
 
+def flatten_cells(cell_states):
+    """ 
+    Flattens raw model output cell states (combines chunks/batches)
+    Params:
+    cell_states -- PyTorch tensor, raw cell state from lstm (num_chunks, chink_size, hidden_size)
+    Returns:
+    flattened_cell_states -- PyTorch tensor, flattened result of shape (timesteps, hidden_size)
+    """
+    flattened_cell_states = cell_states.reshape(-1, cell_states.shape[-1]).numpy()
+    return flattened_cell_states
+
+
 def cell_correlations(cell_states, storage_states):
     """
     Calculate correlation coefficients for each series of
@@ -10,7 +22,7 @@ def cell_correlations(cell_states, storage_states):
     storage_states -- numpy 1D array, series of storage states to compare cell states with (timesteps, )
     """
     # Combine chunks and convert to numpy
-    cells = cell_states.reshape(-1, cell_states.shape[-1]).numpy()
+    cells = flatten_cells(cell_states)
     # Flatten storage states
     storage = storage_states.flatten()
 
@@ -23,7 +35,6 @@ def cell_correlations(cell_states, storage_states):
         # calculate correlations - apply numpy mask to ignore nan storage
         corr = np.ma.corrcoef(np.ma.masked_invalid(storage), np.ma.masked_invalid(cell_i)).data[0, 1] # retrieve value from correlation matrix
         correlations.append(corr)
-
     return correlations
 
 def plot_storage_cell(cell_states_all, storage_states, cell_id, ax, transform_type='standardize'):
