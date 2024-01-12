@@ -195,7 +195,7 @@ class processing_pipeline():
         self.scaler.fit(df_train)
         df_train, df_val, df_test = (self.scaler.transform(df_train), self.scaler.transform(df_val), 
                                      self.scaler.transform(df_test))
-        # 3. Fill nan with 0 (equivalent to filling with mean from train data)
+        # 3. Fill nan with mean from training data
         df_train, df_val, df_test = (self.filler.fill_nan(data=df_train, training_data=df_train), 
                                      self.filler.fill_nan(df_val, training_data=df_train), self.filler.fill_nan(df_test, training_data=df_train))
         # 4. Convert data to PyTorch tensors (from numpy array)
