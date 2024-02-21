@@ -156,5 +156,28 @@ def plot_and_eval(model, X_train, X_val, X_test, y_train, y_val, y_test, datetim
     return metrics
 
     
+def eval_train_val_test(model, X_train, X_val, X_test, y_train, y_val, y_test):
+    """ 
+    Calculate and return R2 metrics for train/val/test set
+    Params:
+    model -- PyTorch model of interest
+    X_train/X_val/X_test -- input data of shape (# batches, timesteps, # features)
+    y_train/y_val/y_test -- target data of shape (# batches, timesteps, 1)
+    Returns:
+    (r2_train, r2_val, r2_test) -- tuple of r2 metrics for the train, val, and test sets
+    """
+    # Get predictions
+    y_hat_train, y_hat_val, y_hat_test = predict(model, X_train), predict(model, X_val), predict(model, X_test)
 
+    # Flatten and remove padding values
+    y_hat_train, y_train = flatten_rm_pad(y_hat=y_hat_train, y=y_train)
+    y_hat_val, y_val = flatten_rm_pad(y_hat=y_hat_val, y=y_val)
+    y_hat_test, y_test = flatten_rm_pad(y_hat=y_hat_test, y=y_test)
+
+    # Find R2 metrics
+    r2_train = r2_score(y_pred=y_hat_train, y_true=y_train)
+    r2_val = r2_score(y_pred=y_hat_val, y_true=y_val)
+    r2_test = r2_score(y_pred=y_hat_test, y_true=y_test)
+
+    return r2_train, r2_val, r2_test
 
