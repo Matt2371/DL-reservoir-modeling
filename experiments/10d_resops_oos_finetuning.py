@@ -1,0 +1,237 @@
+### STUDY FINETUNING THE POOLED MODEL FROM 10d ###
+### TRAIN (75) / VAL (25) ON FINETUNING DATA (FIRST N YEARS)
+### COMPARE RESULTS OF INDIVIDUAL MODEL, POOLED MODEL, 
+### AND FINETUNED MODEL ON LAST 20% OF RECORD (SAME TEST SET AS OTHER EXPERIMENTS)
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+from math import floor
+import os
+import copy
+from tqdm import tqdm
+
+from src.data.data_processing import *
+from src.data.data_fetching import *
+from src.models.model_zoo import *
+from src.models.predict_model import *
+from src.models.train_model import *
+
+def get_left_years(res_list):
+    """ 
+    Get left data window years (first record year after leading NA) for each reservoir ID in res_list.
+    Return results as dictionary
+    Params:
+    res_list -- list of ResOPS ID's to fetch left years for
+    """
+    # For each filtered reservoir, find first year of avail record after leading NA (left year window)
+    left_years_dict = {}
+    for res in res_list:
+        left_years_dict[res] = resops_fetch_data(res_id=res, 
+                                                vars=['inflow', 'outflow', 'storage']).isna().idxmin().max().year
+    return left_years_dict
+
+def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac=0.6, val_frac=0.2, test_frac=0.2, 
+                    log_names=[], return_scaler=False, storage=False):
+    """
+    Run data processing pipeline for one ResOPS reservoir.
+    Params:
+    res_id -- int, ResOPS reservoir ID
+    transform_type -- str, in preprocessing, whether to 'standardize' or 'normalize' the data
+    left -- str (YYYY-MM-DD), beginning boundary of time window
+    right -- str (YYYY-MM-DD), end boundary of time window
+    log_names -- list of column names (str) to take log of before running rest of pipeline. E.g. ['inflow', 'outflow', 'storage']
+    return_scaler -- bool, whether or not to return src.data.data_processing.time_scaler() object
+    storage -- bool, whether or not to include storage data in features
+    """
+
+    # Read in data, columns are [inflow, outflow, storage]
+    df = resops_fetch_data(res_id=res_id, vars=['inflow', 'outflow', 'storage'])
+    # Add day of the year (doy) as another column
+    df['doy'] = df.index.to_series().dt.dayofyear
+    # Select data window
+    df = df[left:right].copy()
+
+    # Take log of df columns that are in log_names
+    for column_name in df.columns:
+        if column_name in log_names:
+            df[column_name] = np.log(df[column_name])
+        else:
+            continue
+
+    # Run data processing pipeline
+    pipeline = processing_pipeline(train_frac=train_frac, val_frac=val_frac, test_frac=test_frac, 
+                                   chunk_size=3*365, pad_value=-1, transform_type=transform_type, fill_na_method='mean')
+    # Train/val/test tensors of shape (#chunks, chunksize, [inflow, outflow, storage, doy])
+    ts_train, ts_val, ts_test = pipeline.process_data(df) 
+
+    # Separate inputs(X) and targets (y)
+    if storage:
+        X_train, X_val, X_test = ts_train[:, :, [0, 2, 3]], ts_val[:, :, [0, 2, 3]], ts_test[:, :, [0, 2, 3]]
+    else:
+        X_train, X_val, X_test = ts_train[:, :, [0, 3]], ts_val[:, :, [0, 3]], ts_test[:, :, [0, 3]]
+    # select outflow as target feature
+    y_train, y_val, y_test = ts_train[:, :, [1]], ts_val[:, :, [1]], ts_test[:, :, [1]]
+
+    if return_scaler:
+        return (X_train, y_train), (X_val, y_val), (X_test, y_test), pipeline.scaler
+    else:
+        return (X_train, y_train), (X_val, y_val), (X_test, y_test)
+    
+
+class multi_reservoir_data:
+    """Store and combine data from multiple in sample and out of sample reservoirs"""
+    def __init__(self, left_years_dict, res_list):
+        """ 
+        Params:
+        left_years_dict: dict, dictionary of year of first available data from each requested reservoir (name : year)
+        res_list: list of ResOps reservoir ID's of interest
+        """
+        self.left_years_dict = left_years_dict
+        self.res_list = res_list
+
+        self.X_train_dict = {}
+        self.y_train_dict = {}
+        self.X_val_dict = {}
+        self.y_val_dict = {}
+        self.X_test_dict = {}
+        self.y_test_dict = {}
+        self.scaler_dict = {}
+        return
+    
+    def fetch_data(self):
+        """Fetch data for each reservoir. For in-sample reservoirs: split into train/val tensors. For oos reservors: reshape data into test tensors"""
+        # Run data processing for each reservoir
+        for reservoir, left_year in tqdm(self.left_years_dict.items(), desc='Processing data: '):
+            result = data_processing(res_id=reservoir, transform_type='standardize', train_frac=0.6, val_frac=0.2, test_frac=0.2,
+                                    left=f'{left_year}-01-01', right='2020-12-31',
+                                    return_scaler=True)
+            # Save results
+            self.X_train_dict[reservoir] = result[0][0] # (# chunks, chunk size, # features (e.g. inflow and doy))
+            self.y_train_dict[reservoir] = result[0][1] # (# chunks, chunk size, 1 (outflow))
+            self.X_val_dict[reservoir] = result[1][0]
+            self.y_val_dict[reservoir] = result[1][1]
+            self.X_test_dict[reservoir] = result[2][0]
+            self.y_test_dict[reservoir] = result[2][1]
+            self.scaler_dict[reservoir] = result[3]
+        return
+    
+
+def r2_score_tensor(model, X, y):
+    """
+    Evaluate r2 score.
+    X -- input tensor of shape (# batches, batch size, # features)
+    y -- target tensor of shape (# batches, batch size, 1)
+    """
+    # Get predictions
+    y_hat = predict(model, X)
+    # Flatten and remove padding values
+    y_hat, y = flatten_rm_pad(y_hat=y_hat, y=y)
+    # Find R2
+    r2 = r2_score(y_pred=y_hat, y_true=y)
+    return r2
+
+def finetune_first_nyears(res_id, left_year, nyears):
+    """
+    Finetune trained pooled model (from experiment 10c) 
+    based on the first n years of data
+    Params:
+    res_id: reservoir to finetune to
+    left_year: left year of data window, i.e. first year of data record
+    nyears: first n years of data from reservoir to use for finetuning
+    Returns:
+    finetuned_model
+    """
+    # Load multi-reservoir model, instantiate loss and optimizer
+    input_size = 2
+    hidden_size1 = 30
+    hidden_size2 = 15
+    output_size = 1
+    dropout_prob = 0.3
+    num_layers = 1
+    torch.manual_seed(0)
+    model = LSTMModel1_opt(input_size=input_size, hidden_size1=hidden_size1, 
+                                hidden_size2=hidden_size2, output_size=output_size, 
+                                num_layers=num_layers, dropout_prob=dropout_prob)
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    model.load_state_dict(torch.load('src/models/saved_models/resops_simul_model.pt'))
+
+    # Get train and validation data for first n years of data
+    data_result = data_processing(res_id=res_id, transform_type='standardize', 
+                                  train_frac=0.75, val_frac=0.25, test_frac=0,
+                                  left=f'{left_year}-01-01', right=f'{left_year + nyears - 1}-12-31',
+                                  return_scaler=True)
+    dataset_train, dataset_val = (TensorDataset(*data_result[0]), TensorDataset(*data_result[1]))
+    dataloader_train, dataloader_val = (DataLoader(dataset_train, batch_size=1, shuffle=False), 
+                                        DataLoader(dataset_val, batch_size=1, shuffle=False))
+    
+    # (Finetuning) training loop
+    train_losses, val_losses = training_loop(model=model, criterion=criterion, optimizer=optimizer, 
+                                            patience=10, dataloader_train=dataloader_train, 
+                                            dataloader_val=dataloader_val, epochs=1000)
+
+    return model
+
+def main():
+    # Read list of out-of-sample reservoirs from experiment 10c, get left years dictionary
+    res_list = pd.read_csv('report/results/resops_training/resops_oos_out_of_sample_test.csv', index_col=0).index.to_list()
+    left_year_dict = get_left_years(res_list=res_list)
+    
+    # Get final 20% of data record as test set, initialize dataframe to store results comparing
+    # individual training, multi-reservoir model, and finetuning
+    complete_data_record = multi_reservoir_data(left_years_dict=left_year_dict, res_list=res_list)
+    complete_data_record.fetch_data()
+    X_test_dict = complete_data_record.X_test_dict
+    y_test_dict = complete_data_record.y_test_dict
+    final_results = pd.DataFrame(index=res_list, columns=['individual',
+                                                          'pooled',
+                                                          'finetuned_pooled_5yr',
+                                                          'finetuned_pooled_10yr',
+                                                          'finetuned_pooled_15yr',
+                                                          'finetuned_pooled_20yr',
+                                                          'finetuned_pooled_25yr',
+                                                          'finetuned_pooled_30yr'])
+    
+    # Get individual model R2 on last 20% of record (test set)
+    individual_r2 = pd.read_csv('report/results/resops_training/resops_individual_r2.csv', index_col=0)
+    final_results.loc[res_list, 'individual'] = individual_r2.loc[res_list, 'test']
+    
+    # Get pooled model R2 on last 20% of record (test set)
+    input_size = 2
+    hidden_size1 = 30
+    hidden_size2 = 15
+    output_size = 1
+    dropout_prob = 0.3
+    num_layers = 1
+    torch.manual_seed(0)
+    model_pooled = LSTMModel1_opt(input_size=input_size, hidden_size1=hidden_size1, 
+                                hidden_size2=hidden_size2, output_size=output_size, 
+                                num_layers=num_layers, dropout_prob=dropout_prob)
+    model_pooled.load_state_dict(torch.load('src/models/saved_models/resops_simul_model.pt'))
+    for res in res_list:
+        final_results.loc[res, 'pooled'] = r2_score_tensor(model=model_pooled,
+                                                                X=X_test_dict[res],
+                                                                y=y_test_dict[res])
+        
+    # Get finetuned model R2 on last 20% of record (test set)
+    finetune_year_list = [5, 10, 15, 20, 25, 30]
+    for first_nyears in finetune_year_list:
+        for res in res_list:
+            # Finetune model to res
+            finetuned_model = finetune_first_nyears(res_id=res, left_year=left_year_dict[res], nyears=first_nyears)
+            # Save R2 on test
+            final_results.loc[res, f'finetuned_pooled_{first_nyears}yr'] = r2_score_tensor(model=finetuned_model,
+                                                                                           X=X_test_dict[res],
+                                                                                           y=y_test_dict[res])
+    # Save final results
+    final_results.to_csv('report/results/resops_training/resops_oos_finetuning.csv')
+    return
+
+# run script
+if __name__ == '__main__':
+    main()
