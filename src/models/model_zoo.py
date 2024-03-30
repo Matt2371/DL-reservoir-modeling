@@ -272,7 +272,7 @@ class LSTMModel3(nn.Module):
         x -- model input of shape (batch size, timesteps, input_size)
         Returns:
         out -- model output of shape (batch size, timesteps, output_size)
-        (hidden_state_list, cell_state_list) -- lists of model hidden and cell states for each layer, each of shape (batch size, timestpes, hidden_size)
+        implied_storages -- implied storage of shape (batch size, timestpes, hidden_size)
         """
         # get dimensions
         N, L, Hin = x.shape # input shape is (batch size, timesteps, input size)
