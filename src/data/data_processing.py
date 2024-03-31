@@ -201,6 +201,8 @@ class processing_pipeline():
         # 4. Convert data to PyTorch tensors (from numpy array)
         ts_train, ts_val, ts_test = torch.tensor(df_train, dtype=torch.float), torch.tensor(df_val, dtype=torch.float), torch.tensor(df_test, dtype=torch.float)
         # 5. Split data into chunks and pad the remainder (for training and validation sets)
-        ts_train, ts_val, ts_test = split_and_pad(ts_train), split_and_pad(ts_val), split_and_pad(ts_test)
+        ts_train, ts_val, ts_test = (split_and_pad(ts_train, chunk_size=self.chunk_size), 
+                                     split_and_pad(ts_val, chunk_size=self.chunk_size), 
+                                     split_and_pad(ts_test, chunk_size=self.chunk_size))
 
         return ts_train, ts_val, ts_test
