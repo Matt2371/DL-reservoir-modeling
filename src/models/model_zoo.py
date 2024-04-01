@@ -345,3 +345,85 @@ class LSTMModel3(nn.Module):
             cell_state_list = [cell_states_1]
 
         return output, implied_storages
+
+class resRNN(nn.Module):
+    """
+    Recurrent neural network to model reservoir releases, with explicit internal storage accumulation
+    """
+    def __init__(self, input_size, hidden_size, output_size, dropout_prob, 
+                 initial_output=0, initial_implied_storage=0):
+        """
+        Params:
+        input_size -- # of features in input (EXCLUDING implied storage)
+        hidden_size -- # of hidden units in Feedforward
+        output_size -- # of features in output
+        dropout_prob -- dropout probability for dropout layers
+        initial_output -- initialize "previous" output for first timestep
+        initial_implied_storage -- initialize "previous" implied storage for first timestep
+        """
+        super(resRNN, self).__init__()
+        self.inital_output = initial_output
+        self.initial_implied_storage = initial_implied_storage
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+
+        # Initialize model layers
+        # Get hidden state
+        self.linear1 = nn.Linear(input_size + 1 + hidden_size, hidden_size)
+        self.tanh1 = nn.Tanh()
+        self.dropout1 = nn.Dropout(dropout_prob)
+        # Get output
+        self.linear2 = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        """
+        Run the forward pass.
+        Params:
+        x -- model input of shape (batch size, timesteps, input_size)
+        Returns:
+        out -- model output of shape (batch size, timesteps, output_size)
+        implied_storage -- implied storages of shape (batch size, timestpes, output_size)
+        """
+        # get dimensions
+        N, L, Hin = x.shape # input shape is (batch size, timesteps, input size)
+
+        hidden_states = [] # store sequence of hidden states
+        implied_storages = [] # store sequence of implied storages
+        output = [] # store predictions
+
+        # initialize previous output (batch size, output size)
+        prev_output = self.inital_output * torch.ones((N, self.output_size))
+        # initialize previous implied storage (batch size, output size)
+        prev_implied_storage = self.initial_implied_storage * torch.ones((N, self.output_size))
+        # initialize hidden state
+        hx = torch.zeros(N, self.hidden_size) # (batch size, hidden size)
+
+        for i in range(L):
+            # calculate current implied storage: prev storage + current inflow - prev output
+            current_implied_storage = prev_implied_storage + x[:, i, [0]] - prev_output # (batch size, output size)
+            # save current implied storage
+            implied_storages.append(current_implied_storage)
+
+            # append previous implied storage and previous hidden state to input of current timestep: 
+            # (batch size, input size) -> (batch size, input size + output size + hidden_size)
+            input_i = torch.cat([x[:, i, :], current_implied_storage, hx], dim=-1)
+
+            # get current hidden state (FF layer)
+            hx = self.tanh1(self.linear1(input_i)) # (batch size, hidden_size)
+            hidden_states.append(hx) # save hidden state for current timestep
+
+            # get output (linear head)
+            out = self.dropout1(hx) # (batch size, hidden size)
+            out = self.linear2(out) # (batch size, output size)
+
+            # save results, update prev_output and prev_implied_storage for next timestep
+            output.append(out)
+            prev_output = out
+            prev_implied_storage = current_implied_storage
+    
+        # concatenate results along new dimension (create timesteps dimension at dim=1)
+        hidden_states = torch.stack(hidden_states, dim=1) # (batch size, timesteps, hidden size)
+        implied_storages = torch.stack(implied_storages, dim=1) # (batch, timesteps, output size)
+        output = torch.stack(output, dim=1) # (batch size, timesteps, output size)
+
+        return output, implied_storages
