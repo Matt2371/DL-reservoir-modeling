@@ -5,8 +5,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-#### FUNCTIONS AND CLASSES TO ASSIST WITH MODEL TRAINING AND VALIDATION ####
-#### RUN TRAINING_LOOP() FUNCTION TO TRAIN MODEL WITH EARLY STOPPING ####
+#### IMPLEMENTS TRAINING LOOP FOR MC-LSTM WITH EARLY STOPPING ####
 
 def create_mask(x, pad_value=-1):
     """Create mask to hide padded outputs from the loss function"""
@@ -15,33 +14,24 @@ def create_mask(x, pad_value=-1):
     mask = (x != pad_value).to(torch.float)
     return mask
 
-def count_parameters(model):
-    """Count the number of trainable parameters in a model"""
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def train_one_epoch(model, criterion, optimizer, dataloader_train, return_cell=True):
+def train_one_epoch_mclstm(model, criterion, optimizer, dataloader_train):
     """
-    Train the model one epoch
-    Params:
-    model -- PyTorch model
-    criterion -- function to evaluate losses
-    optmizer -- Pytorch optimizer
-    dataloader_train -- Pytorch dataloader for training data
-    return_cell -- bool; whether the model only the output or intermediate states as well (e.g. lstm cell states)
+    Same as train_one_epoch() except for MC-LSTM, where mass input and
+    auxillary input need to be separated.
     Return training loss (averaged for over each minibatch) for the epoch
     """
 
     # training loop
     total_loss = 0
     model.train() # set model to training mode
-    for inputs, targets in dataloader_train:
+    for inputs_m, inputs_a, targets in dataloader_train:
         optimizer.zero_grad()
 
         # Forward pass
-        if return_cell:
-            outputs, _ = model(inputs)
-        else:
-            outputs = model(inputs)
+        outputs, c = model(inputs_m, inputs_a)
+        # Sum mass outputs to get prediction
+        outputs = outputs.sum(dim=-1, keepdim=True) 
 
         # Apply mask on targets/outputs
         mask = create_mask(targets)
@@ -60,33 +50,29 @@ def train_one_epoch(model, criterion, optimizer, dataloader_train, return_cell=T
     avg_loss = total_loss / len(dataloader_train)
     return avg_loss
 
-def val_one_epoch(model, criterion, dataloader_val, return_cell=True):
+
+def val_one_epoch_mclstm(model, criterion, dataloader_val):
     """
-    Calculate validation loss for a given epoch
-    Params:
-    model -- PyTorch model
-    criterion -- function to evaluate losses
-    dataloader_val -- Pytorch dataloader for validation data
-    return_cell -- bool; whether the model only the output or intermediate states as well (e.g. lstm cell states)
+    Same as val_one_epoch() except for MC-LSTM, where mass input and
+    auxillary input need to be separated.
     Return validation loss (averaged for over each minibatch) for the epoch
     """
 
     model.eval()  # Set the model to evaluation mode
     with torch.no_grad():
         total_val_loss = 0
-        for val_inputs, val_targets in dataloader_val:
-            # forward pass
-            if return_cell:
-                val_outputs, _ = model(val_inputs)
-            else:
-                val_outputs = model(val_inputs)
+        for val_inputs_m, val_inputs_a, val_targets in dataloader_val:
+            # Forward pass
+            val_outputs, c = model(val_inputs_m, val_inputs_a)
+            # Sum mass outputs to get prediction
+            val_outputs = val_outputs.sum(dim=-1, keepdim=True) 
 
-            # apply mask on targets/outputs
+            # Apply mask on targets/outputs
             mask = create_mask(val_targets)
             val_masked_outputs = val_outputs * mask
             val_masked_targets = val_targets * mask
 
-            # evaluate validation loss
+            # Evaluate validation loss
             val_loss = criterion(val_masked_outputs, val_masked_targets)
             total_val_loss += val_loss.item()
 
@@ -111,9 +97,9 @@ class EarlyStopper:
                 return True
         return False
     
-def training_loop(model, criterion, optimizer, patience, dataloader_train, dataloader_val, epochs):
+def training_loop_mclstm(model, criterion, optimizer, patience, dataloader_train, dataloader_val, epochs):
     """
-    Run full training loop with early stopping.
+    Run full training loop with early stopping for MC-LSTM.
     Params:
     model -- PyTorch model to train
     criterion -- function to evaluate loss
@@ -133,42 +119,14 @@ def training_loop(model, criterion, optimizer, patience, dataloader_train, datal
     val_losses = []
     early_stopper = EarlyStopper(patience=patience) # instantiate early stopper
     for epoch in tqdm(range(num_epochs), desc='Training epochs: '):
-        model.train() # set model to training mode
-
-        train_loss = train_one_epoch(model, criterion, optimizer, dataloader_train)
+        model.train() # set model1 to training mode
+        train_loss = train_one_epoch_mclstm(model, criterion, optimizer, dataloader_train)
         train_losses.append(train_loss)
-        val_loss = val_one_epoch(model, criterion, dataloader_val)
+        val_loss = val_one_epoch_mclstm(model, criterion, dataloader_val)
         val_losses.append(val_loss)
 
         if early_stopper.early_stop(val_loss):
             break
     return train_losses, val_losses
 
-def plot_train_val(train_losses, val_losses, ax=None):
-    """
-    Plot train and validation losses vs epochs after running training loop
-    Params:
-    train_losses -- list, training losses per epoch
-    val_losses -- list, validation losses per epoch
-    ax -- matplotlib axes, if provided
-    """
-    assert len(train_losses) == len(val_losses)
-    if ax is not None:
-        ax.plot(train_losses)
-        ax.plot(val_losses)
-        ax.legend(['training loss', 'validation loss'])
-        ax.set_xlabel('Epochs')
-        ax.set_ylabel('Loss')
-    else:
-        plt.clf()
-        plt.plot(train_losses)
-        plt.plot(val_losses)
-        plt.legend(['training loss', 'validation loss'])
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
 
-def final_error(val_losses):
-    """ 
-    Print the final validation loss and the number of training epochs
-    """
-    print(f'Final validation loss: {val_losses[-1]}, Epochs trained: {len(val_losses)}')

@@ -17,7 +17,8 @@ from src.data.data_processing import *
 from src.data.data_fetching import *
 from src.models.model_zoo import *
 from src.models.predict_model import *
-from src.models.train_model import *
+from src.models.train_model import plot_train_val
+from src.models.train_mclstm import *
 from src.models.hyperparameter_tuning import *
 from src.models import mclstm
 
@@ -78,12 +79,12 @@ def main():
     # Instantiate model and optimizer
     torch.manual_seed(0)
     criterion = nn.MSELoss()
-    mc_lstm = mclstm.MassConservingLSTM(in_dim=1, aux_dim=1, out_dim=1, batch_first=True)
+    mc_lstm = mclstm.MassConservingLSTM(in_dim=1, aux_dim=1, out_dim=30, batch_first=True)
     optimizer = optim.Adam(mc_lstm.parameters(), lr=0.001)
     # Run training loop (finetune model to shasta)
-    train_losses, val_losses = training_loop(model=mc_lstm, criterion=criterion, optimizer=optimizer, 
+    train_losses, val_losses = training_loop_mclstm(model=mc_lstm, criterion=criterion, optimizer=optimizer, 
                                             patience=10, dataloader_train=dataloader_train_res, 
-                                            dataloader_val=dataloader_val_res, epochs=300, mclstm=True)
+                                            dataloader_val=dataloader_val_res, epochs=300)
     # Save trained model
     torch.save(mc_lstm.state_dict(), 'src/models/saved_models/mc_lstm.pt')
 

@@ -355,7 +355,7 @@ class resRNN(nn.Module):
         """
         Params:
         input_size -- # of features in input (EXCLUDING implied storage)
-        hidden_size -- # of hidden units in Feedforward
+        hidden_size -- # of hidden units in recurrent layer
         output_size -- # of features in output
         dropout_prob -- dropout probability for dropout layers
         initial_output -- initialize "previous" output for first timestep
@@ -408,7 +408,7 @@ class resRNN(nn.Module):
             # (batch size, input size) -> (batch size, input size + output size + hidden_size)
             input_i = torch.cat([x[:, i, :], current_implied_storage, hx], dim=-1)
 
-            # get current hidden state (FF layer)
+            # get current hidden state (recurrent FF layer)
             hx = self.tanh1(self.linear1(input_i)) # (batch size, hidden_size)
             hidden_states.append(hx) # save hidden state for current timestep
 
