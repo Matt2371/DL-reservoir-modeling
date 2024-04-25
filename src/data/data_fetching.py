@@ -37,3 +37,23 @@ def resops_fetch_data(res_id, vars = ['inflow', 'outflow', 'storage']):
     # select desired columns
     df = df[vars]
     return df
+
+def filter_res(record_frac=0.9):
+    """
+    Filter ResOPS reservoir ID's that have at least some percentage (default 90%) 
+    of a complete inflow/outflow/storage record. Return list of reservoir ID's.
+    Params:
+    record_frac -- float, fraction of complete record required
+    """
+    # Read inflow/outflow/storage for all ResOps reservoirs
+    df_inflow = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_INFLOW_CUMECS.csv", parse_dates=True, index_col=0, dtype=np.float32)
+    df_outflow = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_OUTFLOW_CUMECS.csv", parse_dates=True, index_col=0, dtype=np.float32)
+    df_storage = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_STORAGE_MCM.csv", parse_dates=True, index_col=0, dtype=np.float32)
+
+    # Columns (reservoirs) where more than 90% of record is complete for each variable
+    thresh = len(df_inflow) * record_frac
+    res_list = list(set(df_inflow.dropna(thresh=thresh, axis=1).columns) 
+                    & set(df_outflow.dropna(thresh=thresh, axis=1).columns)
+                    & set(df_storage.dropna(thresh=thresh, axis=1).columns))
+    
+    return res_list

@@ -1,6 +1,8 @@
-### EVALUATE OUT OF SAMPLE RESERVOIRS ON RESOPS DATA ###
-### TRAIN SIMULTANEOUSLY, TEST ON OUT OF SAMPLE RESERVOIRS ###
-# I.e. for in-sample reservoirs: split into train/val tensors. For oos reservors: reshape data into test tensors
+### TRAIN POOLED MODEL, EVALUATE OUT OF SAMPLE RESERVOIRS ON RESOPS DATA ###
+### 80% OF RESERVOIRS RANDOMLY SELECTED TO BE IN SAMPLE, REMAINING 20% ARE OUT OF SAMPLE RESERVOIRS ###
+### TRAIN SIMULTANEOUSLY (75/25 train, val split on in-sample reservoirs) ###
+### TEST ON ALL RECORDS FOR OUT-OF-SAMPLE RESERVOIRS ###
+# I.e. for in-sample reservoirs: split into train/val tensors. For oos reservors: reshape all data into test tensors
 
 import pandas as pd
 import numpy as np
@@ -19,25 +21,6 @@ from src.data.data_fetching import *
 from src.models.model_zoo import *
 from src.models.predict_model import *
 from src.models.train_model import *
-
-def filter_res(record_frac):
-    """
-    Filter ResOPS reservoir ID's that have at least some percentage of a complete inflow/outflow/storage record
-    Params:
-    record_frac -- float, fraction of complete record required
-    """
-    # Read inflow/outflow/storage for all ResOps reservoirs
-    df_inflow = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_INFLOW_CUMECS.csv", parse_dates=True, index_col=0, dtype=np.float32)
-    df_outflow = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_OUTFLOW_CUMECS.csv", parse_dates=True, index_col=0, dtype=np.float32)
-    df_storage = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_STORAGE_MCM.csv", parse_dates=True, index_col=0, dtype=np.float32)
-
-    # Columns (reservoirs) where more than 90% of record is complete for each variable
-    thresh = len(df_inflow) * 0.9
-    res_list = list(set(df_inflow.dropna(thresh=thresh, axis=1).columns) 
-                    & set(df_outflow.dropna(thresh=thresh, axis=1).columns)
-                    & set(df_storage.dropna(thresh=thresh, axis=1).columns))
-    
-    return res_list
 
 def get_left_years(res_list):
     """ 
@@ -219,7 +202,7 @@ def r2_score_tensor(model, X, y):
     
 def main():
     # Get list of reservoir ID of interest
-    res_list = filter_res(record_frac=0.8)
+    res_list = filter_res()
 
     # Randomly choose out of sample reservoirs
     np.random.seed(0)
@@ -242,8 +225,10 @@ def main():
     # Evaluate and save in-sample performance
     r2_in_sample_df = pd.DataFrame(index=data_combiner.is_list, columns=['train', 'val'])
     for in_res in tqdm(data_combiner.is_list, desc='Evaluating in-sample performance: '):
-        r2_in_sample_df.loc[in_res, :] = [r2_score_tensor(model=simul_model, X=data_combiner.X_train_dict[in_res], y=data_combiner.y_train_dict[in_res]),
-                                          r2_score_tensor(model=simul_model, X=data_combiner.X_val_dict[in_res], y=data_combiner.y_val_dict[in_res])]
+        r2_in_sample_df.loc[in_res, :] = [r2_score_tensor(model=simul_model, X=data_combiner.X_train_dict[in_res], 
+                                                          y=data_combiner.y_train_dict[in_res]),
+                                          r2_score_tensor(model=simul_model, X=data_combiner.X_val_dict[in_res], 
+                                                          y=data_combiner.y_val_dict[in_res])]
     r2_in_sample_df.to_csv('report/results/resops_training/resops_oos_in_sample_train_val.csv')
 
     # Evaluate and save out-of-sample performance

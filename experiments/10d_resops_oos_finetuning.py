@@ -1,7 +1,8 @@
-### STUDY FINETUNING THE POOLED MODEL FROM 10d ###
-### TRAIN (75) / VAL (25) ON FINETUNING DATA (FIRST N YEARS)
+### STUDY FINETUNING THE POOLED MODEL FROM EXPERIMENT 10d ###
+### TRAIN (75) / VAL (25) SPLIT ON FINETUNING DATA (FIRST N YEARS) ###
 ### COMPARE RESULTS OF INDIVIDUAL MODEL, POOLED MODEL, 
-### AND FINETUNED MODEL ON LAST 20% OF RECORD (SAME TEST SET AS OTHER EXPERIMENTS)
+### AND FINETUNED MODEL ON LAST 20% OF RECORD (SAME TEST SET AS OTHER EXPERIMENTS) ###
+
 
 import pandas as pd
 import numpy as np
@@ -184,6 +185,7 @@ def main():
     
     # Get final 20% of data record as test set, initialize dataframe to store results comparing
     # individual training, multi-reservoir model, and finetuning
+    # Recall that 60/20/20 was the default train/val/test set, so we can just extract the test data
     complete_data_record = multi_reservoir_data(left_years_dict=left_year_dict, res_list=res_list)
     complete_data_record.fetch_data()
     X_test_dict = complete_data_record.X_test_dict
