@@ -5,7 +5,7 @@ def flatten_cells(cell_states):
     """ 
     Flattens raw model output cell states (combines chunks/batches)
     Params:
-    cell_states -- PyTorch tensor, raw cell state from lstm (num_chunks, chink_size, hidden_size)
+    cell_states -- PyTorch tensor, raw cell state from lstm (num_chunks, chunk_size, hidden_size)
     Returns:
     flattened_cell_states -- PyTorch tensor, flattened result of shape (timesteps, hidden_size)
     """
