@@ -9,6 +9,20 @@
    url = {http://scikit-learn.sourceforge.net.},
    year = {2011}
 }
+@article{Steinschneider2023,
+   abstract = {Climate vulnerability assessments rely on water infrastructure system models that imperfectly predict performance metrics under ensembles of future scenarios. There is a benefit to reduced complexity system representations to support these assessments, especially when large ensembles are used to better characterize future uncertainties. An important question is whether the total uncertainty in the output metrics is primarily attributable to the climate ensemble or to the systems model itself. Here we develop a method to address this question by combining time series error models of performance metrics with time-varying Sobol sensitivity analysis. The method is applied to a reduced complexity multi-reservoir systems model of the Sacramento-San Joaquin River Basin in California to demonstrate the decomposition of flood risk and water supply uncertainties under an ensemble of climate change scenarios. The results show that the contribution of systems model error to total uncertainty is small (∼5%–15%) relative to climate based uncertainties. This indicates that the reduced complexity systems model is sufficiently accurate for use in the context of the vulnerability assessment. We also observe that climate uncertainty is dominated by the choice of general circulation model and its interactive effects with the representative concentration pathway (RCP), rather than the RCP alone. This observation has implications for how climate vulnerabilities should be interpreted.},
+   author = {Scott Steinschneider and Jonathan D. Herman and John Kucharski and Marriah Abellera and Peter Ruggiero},
+   doi = {10.1029/2022WR032349},
+   issn = {19447973},
+   issue = {1},
+   journal = {Water Resources Research},
+   keywords = {climate vulnerability assessment,fit-for-purpose,systems model,uncertainty,variance decomposition},
+   month = {1},
+   publisher = {John Wiley and Sons Inc},
+   title = {Uncertainty Decomposition to Understand the Influence of Water Systems Model Error in Climate Vulnerability Assessments},
+   volume = {59},
+   year = {2023}
+}
 @article{Hochreiter1997,
    abstract = {Learning to store information over extended time intervals by recurrent backpropagation takes a very long time, mostly because of insufficient, decaying error backflow. We briefly review Hochreiter's (1991) analysis of this problem, then address it by introducing a novel, efficient, gradient-based method called long short-term memory (LSTM). Truncating the gradient where this does not do harm, LSTM can learn to bridge minimal time lags in excess of 1000 discrete-time steps by enforcing constant error flow through constant error carousels within special units. Multiplicative gate units learn to open and close access to the constant error flow. LSTM is local in space and time; its computational complexity per time step and weight is O(1). Our experiments with artificial data involve local, distributed, real-valued, and noisy pattern representations. In comparisons with real-time recurrent learning, back propagation through time, recurrent cascade correlation, Elman nets, and neural sequence chunk-ing, LSTM leads to many more successful runs, and learns much faster. LSTM also solves complex, artificial long-time-lag tasks that have never been solved by previous recurrent network algorithms.},
    author = {Sepp Hochreiter and J Urgen Schmidhuber},
@@ -66,7 +80,7 @@
    volume = {22},
    year = {2018}
 }
-@inbook{Kratzert2019,
+@inbook{Kratzert2019a,
    author = {Frederik Kratzert and Mathew Herrnegger and Daniel Klotz and Sepp Hochreiter and Günter Klambauer},
    doi = {10.1007/978-3-030-28954-6_19},
    booktitle = {Explainable AI: Interpreting, Explaining and Visualizing Deep Learning},
@@ -133,7 +147,7 @@
    volume = {9},
    year = {2022}
 }
-@article{Kratzert2019,
+@article{Kratzert2019b,
    abstract = {Regional rainfall-runoff modeling is an old but still mostly outstanding problem in the hydrological sciences. The problem currently is that traditional hydrological models degrade significantly in performance when calibrated for multiple basins together instead of for a single basin alone. In this paper, we propose a novel, data-driven approach using Long Short-Term Memory networks (LSTMs) and demonstrate that under a "big data" paradigm, this is not necessarily the case. By training a single LSTM model on 531 basins from the CAMELS dataset using meteorological time series data and static catchment attributes, we were able to significantly improve performance compared to a set of several different hydrological benchmark models. Our proposed approach not only significantly outperforms hydrological models that were calibrated regionally, but also achieves better performance than hydrological models that were calibrated for each basin individually. Furthermore, we propose an adaption to the standard LSTM architecture, which we call an Entity-Aware-LSTM (EA-LSTM), that allows for learning catchment similarities as a feature layer in a deep learning model. We show that these learned catchment similarities correspond well to what we would expect from prior hydrological understanding.},
    author = {Frederik Kratzert and Daniel Klotz and Guy Shalev and Günter Klambauer and Sepp Hochreiter and Grey Nearing},
    doi = {10.5194/hess-23-5089-2019},
@@ -210,6 +224,21 @@
    url = {https://proceedings.mlr.press/v108/li20j.html},
    year = {2019}
 }
+@article{Raissi2019,
+   abstract = {We introduce physics-informed neural networks – neural networks that are trained to solve supervised learning tasks while respecting any given laws of physics described by general nonlinear partial differential equations. In this work, we present our developments in the context of solving two main classes of problems: data-driven solution and data-driven discovery of partial differential equations. Depending on the nature and arrangement of the available data, we devise two distinct types of algorithms, namely continuous time and discrete time models. The first type of models forms a new family of data-efficient spatio-temporal function approximators, while the latter type allows the use of arbitrarily accurate implicit Runge–Kutta time stepping schemes with unlimited number of stages. The effectiveness of the proposed framework is demonstrated through a collection of classical problems in fluids, quantum mechanics, reaction–diffusion systems, and the propagation of nonlinear shallow-water waves.},
+   author = {M. Raissi and P. Perdikaris and G. E. Karniadakis},
+   doi = {10.1016/j.jcp.2018.10.045},
+   issn = {10902716},
+   issue = {1},
+   journal = {Journal of Computational Physics},
+   keywords = {Data-driven scientific computing,Machine learning,Nonlinear dynamics,Predictive modeling,Runge–Kutta methods},
+   month = {2},
+   pages = {686-707},
+   publisher = {Academic Press Inc.},
+   title = {Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations},
+   volume = {378},
+   year = {2019}
+}
 @article{Adams2017,
    abstract = {Building reservoir release schedules to manage engineered river systems can involve costly trade-offs between storing and releasing water. As a result, the design of release schedules requires metrics that quantify the benefit and damages created by releases to the downstream ecosystem. Such metrics should support making operational decisions under uncertain hydrologic conditions, including drought and flood seasons. This study addresses this need and develops a reservoir operation rule structure and method to maximize downstream environmental benefit while meeting human water demands. The result is a general approach for hedging downstream environmental objectives. A multistage stochastic mixed-integer nonlinear program with Markov Chains, identifies optimal “environmental hedging,” releases to maximize environmental benefits subject to probabilistic seasonal hydrologic conditions, current, past, and future environmental demand, human water supply needs, infrastructure limitations, population dynamics, drought storage protection, and the river's carrying capacity. Environmental hedging “hedges bets” for drought by reducing releases for fish, sometimes intentionally killing some fish early to reduce the likelihood of large fish kills and storage crises later. This approach is applied to Folsom reservoir in California to support survival of fall-run Chinook salmon in the lower American River for a range of carryover and initial storage cases. Benefit is measured in terms of fish survival; maintaining self-sustaining native fish populations is a significant indicator of ecosystem function. Environmental hedging meets human demand and outperforms other operating rules, including the current Folsom operating strategy, based on metrics of fish extirpation and water supply reliability.},
    author = {L. E. Adams and J. R. Lund and P. B. Moyle and R. M. Quiñones and J. D. Herman and T. A. O'Rear},
@@ -224,20 +253,6 @@
    title = {Environmental hedging: A theory and method for reconciling reservoir operations for downstream ecology and water supply},
    volume = {53},
    year = {2017}
-}
-@misc{Giuliani2021,
-   abstract = {The state of the art for optimal water reservoir operations is rapidly evolving, driven by emerging societal challenges. Changing values for balancing environmental resources, multisectoral human system pressures, and more frequent climate extremes are increasing the complexity of operational decision making. Today, reservoir operations benefit from technological advances, including improved monitoring and forecasting systems as well as increasing computational power. Past research in this area has largely focused on improving solution algorithms within the limits of the available computational power, using simplified problem formulations that can misrepresent important systemic complexities and intersectoral interactions. In this study, we review the recent literature focusing on how the operation design problem is formulated, rather than solved, to address existing challenges and take advantage of new opportunities. This paper contributes a comprehensive classification of over 300 studies published over the last years into distinctive categories depending on the adopted problem formulation, which clarifies consolidated methodological approaches and emerging trends. Our analysis also suggests that control policy design methods may benefit from broadening the types of information that is used to condition operational decisions, and from using emulation modeling to identify low-order, computationally efficient surrogate models capturing realistic representations of river basin systems' complexity in order to isolate key decision-relevant processes. These advances in reservoir operations hold significant promise for better addressing the challenges of conflicting human pressures and a changing world, which is particularly important, given the renewed interest in dam construction globally.},
-   author = {M. Giuliani and J. R. Lamontagne and P. M. Reed and A. Castelletti},
-   doi = {10.1029/2021WR029927},
-   issn = {19447973},
-   issue = {12},
-   journal = {Water Resources Research},
-   keywords = {multiobjective,optimal control,reservoir operation,water management},
-   month = {12},
-   publisher = {John Wiley and Sons Inc},
-   title = {A State-of-the-Art Review of Optimal Reservoir Control for Managing Conflicting Demands in a Changing World},
-   volume = {57},
-   year = {2021}
 }
 @article{Thompson2013,
    abstract = {Globally, many different kinds of water resources management issues call for policy- and infrastructure-based responses. Yet responsible decision-making about water resources management raises a fundamental challenge for hydrologists: making predictions about water resources on decadal- to century-long timescales. Obtaining insight into hydrologic futures over 100 yr timescales forces researchers to address internal and exogenous changes in the properties of hydrologic systems. To do this, new hydrologic research must identify, describe and model feedbacks between water and other changing, coupled environmental subsystems. These models must be constrained to yield useful insights, despite the many likely sources of uncertainty in their predictions. Chief among these uncertainties are the impacts of the increasing role of human intervention in the global water cycle - a defining challenge for hydrology in the Anthropocene. Here we present a research agenda that proposes a suite of strategies to address these challenges from the perspectives of hydrologic science research. The research agenda focuses on the development of co-evolutionary hydrologic modeling to explore coupling across systems, and to address the implications of this coupling on the long-time behavior of the coupled systems. Three research directions support the development of these models: hydrologic reconstruction, comparative hydrology and model-data learning. These strategies focus on understanding hydrologic processes and feedbacks over long timescales, across many locations, and through strategic coupling of observational and model data in specific systems. We highlight the value of use-inspired and team-based science that is motivated by real-world hydrologic problems but targets improvements in fundamental understanding to support decision-making and management. Fully realizing the potential of this approach will ultimately require detailed integration of social science and physical science understanding of water systems, and is a priority for the developing field of sociohydrology.},
@@ -579,21 +594,6 @@
    volume = {30},
    year = {2016}
 }
-@article{Ehsani2016,
-   abstract = {Construction of dams and the resulting water impoundments are one of the most common engineering procedures implemented on river systems globally; yet simulating reservoir operation at the regional and global scales remains a challenge in human–earth system interactions studies. Developing a general reservoir operating scheme suitable for use in large-scale hydrological models can improve our understanding of the broad impacts of dams operation. Here we present a novel use of artificial neural networks to map the general input/output relationships in actual operating rules of real world dams. We developed a new general reservoir operation scheme (GROS) which may be added to daily hydrologic routing models for simulating the releases from dams, in regional and global-scale studies. We show the advantage of our model in distinguishing between dams with various storage capacities by demonstrating how it modifies the reservoir operation in respond to changes in capacity of dams. Embedding GROS in a water balance model, we analyze the hydrological impact of dam size as well as their distribution pattern within a drainage basin and conclude that for large-scale studies it is generally acceptable to aggregate the capacity of smaller dams and instead model a hypothetical larger dam with the same total storage capacity; however we suggest limiting the aggregation area to HUC 8 sub-basins (approximately equal to the area of a 60 km or a 30 arc minute grid cell) to avoid exaggerated results.},
-   author = {Nima Ehsani and Balazs M. Fekete and Charles J. Vörösmarty and Zachary D. Tessler},
-   doi = {10.1007/s00477-015-1147-9},
-   issn = {14363259},
-   issue = {4},
-   journal = {Stochastic Environmental Research and Risk Assessment},
-   keywords = {Dams,Hydrological alteration,Hydrological models,Neural network,Reservoir operation},
-   month = {4},
-   pages = {1151-1166},
-   publisher = {Springer New York LLC},
-   title = {A neural network based general reservoir operation scheme},
-   volume = {30},
-   year = {2016}
-}
 @article{Dong2023,
    abstract = {Reservoirs have been built worldwide to address the water-related issues. To fully understand their potential impacts on the hydrologic regime, explicitly parameterizing reservoir operation in hydrologic models is often required. In this study, two data-driven reservoir operation schemes based on extreme gradient boosting (XGBoost) and artificial neural network (ANN) are respectively developed to predict the reservoir release and storage in hydrologic models for reservoirs with historic in-situ inflow, storage, release data. Then, a hybrid modelling framework is proposed by coupling a high-resolution (3 km) hydrologic model with (1) the developed data-driven reservoir operation schemes and (2) a calibration-free conceptual reservoir operation scheme designed for data-scarce reservoirs. This allows quantitative assessment of the cumulative impacts of dam operation on the hydrologic regime under different reservoir data availability. The framework is applied to the Upper Yangtze River Basin (UYRB) in China that is one of the most regulated river basins across the country due to extensive reservoir construction. Results indicate that both data-driven reservoir operation schemes can well reconstruct the reservoir releases and storage in the UYRB (daily NSE of ∼ 0.9), and the XGBoost performs slightly better than ANN. By coupling reservoir operation, the model shows a remarkably improved performance in reconstructing the daily streamflow of the basin. The major reservoirs in the UYRB can redistribute excessive water in the wet season to the dry season and attenuate the high and low flows, leading to enhanced water security along the river. Our approach provides a practical framework for reservoir impact assessment and predictions.},
    author = {Ningpeng Dong and Wenhai Guan and Jixue Cao and Yibo Zou and Mingxiang Yang and Jianhui Wei and Liang Chen and Hao Wang},
@@ -647,4 +647,45 @@
    title = {Water storage and release policies for all large reservoirs of conterminous United States},
    volume = {603},
    year = {2021}
+}
+@article{Zheng2022,
+   abstract = {Study region: Qingjiang cascade reservoir, China. Study focus: Reservoirs regulate the natural streamflow to utilize water resources comprehensively. How to mine the existing massive reservoir operation data to describe human operation behaviors is a challenge. To address this issue, a data-driven method, Long short-term memory (LSTM), was used to simulate the reservoir outflow by inputting historical information. The physics-guided LSTM model, shortly named PG-LSTM, was formulated by using synthetic flood samples and physical constraints of water balance, boundary, and monotonicity. New hydrological insights: (1) PG-LSTM can reproduce historical outflow with seasonal variations, or predict outflow without lags, (2) knowledge of reservoir operations can guide LSTM with the reduction of negative flow occurrence and the accurate identification of operation behaviors under extreme hydrological conditions, (3) specifically, compared with conventional LSTM, gradient boosting regression tree and conventional reservoir operation, PG-LSTM can improve the Nash-Sutcliffe efficiency of cascade reservoir during the test period from 0.50, 0.20, and 0.17 to 0.54 in the reproduction scenario, and from 0.84, 0.26, and 0.17 to 0.85 in the prediction scenario with five-fold cross-validation method. The PG-LSTM is helpful to describe human operation behaviors of reservoirs.},
+   author = {Yalian Zheng and Pan Liu and Lei Cheng and Kang Xie and Wei Lou and Xiao Li and Xinran Luo and Qian Cheng and Dongyang Han and Wei Zhang},
+   doi = {10.1016/j.ejrh.2022.101034},
+   issn = {22145818},
+   journal = {Journal of Hydrology: Regional Studies},
+   keywords = {Data-driven,Extracting human behaviors,LSTM,Physics-guided},
+   month = {4},
+   pages = {101034},
+   publisher = {Elsevier B.V.},
+   title = {Extracting operation behaviors of cascade reservoirs using physics-guided long-short term memory networks},
+   volume = {40},
+   url = {https://linkinghub.elsevier.com/retrieve/pii/S2214581822000477},
+   year = {2022}
+}
+@article{Tran2025,
+   abstract = {Reservoirs play a vital role in regulating streamflow timing and variability for hydroelectricity, flood control, water supply, irrigation, and recreation. Despite their importance, many reservoirs lack comprehensive operational guidelines, making their management complex due to conflicting operational objectives. Hence traditional policy-based reservoir models often fail to capture real-world conditions accurately and they depend on perfect streamflow predictions, which are not always available. In contrast, data-driven models like Long Short-Term Memory (LSTM) networks offer a robust alternative. This study introduces an approach that integrates reservoir characteristics—such as main use, climate, and maximum capacity—into the LSTM model to enhance reservoir release predictions. Using data from nearly 200 reservoirs in the contiguous United States (CONUS), our conditioned LSTM model (LSTM_cond) was compared with both the vanilla LSTM and a traditional policy-based approach. Our results show that while both LSTM_cond and LSTM perform better than the policy-based approach, LSTM_cond consistently outperforms LSTM for hydroelectric, water supply, irrigation, and recreation reservoirs. The KGE median values for LSTM_cond for out-sample reservoirs are 0.764, 0.565, 0.821, and 0.779, respectively, for the aforementioned reservoir types, which are consistently higher than the corresponding KGE values of 0.737, 0.413, 0.775, and 0.713 of LSTM, demonstrating its advantages in improving generalizability. By integrating reservoirs’ attributes into the LSTM model, our approach improves the performance of outflow simulation and provides insights into the contributing factors, making the predictions more explainable.},
+   author = {Hoang Tran and Tian Zhou and Zeli Tan and Yilin Fang and L. Ruby Leung},
+   doi = {10.1016/j.jhydrol.2025.133750},
+   issn = {00221694},
+   journal = {Journal of Hydrology},
+   keywords = {CONUS,LSTM,Machine learning,Operational control,Reservoirs},
+   month = {11},
+   publisher = {Elsevier B.V.},
+   title = {Improving the prediction of daily reservoir releases over the CONUS using conditioned LSTM},
+   volume = {661},
+   year = {2025}
+}
+@article{Fan2023,
+   abstract = {<p> Long short-term memory (LSTM) networks have demonstrated successful applications in accurately and efficiently predicting reservoir releases from hydrometeorological drivers including reservoir storage, inflow, precipitation, and temperature. However, due to its black-box nature and lack of process-based implementation, we are unsure whether LSTM makes good predictions for the right reasons. In this work, we use an explainable machine learning (ML) method, called SHapley Additive exPlanations (SHAP), to evaluate the variable importance and variable-wise temporal importance in the LSTM model prediction. In application to 30 reservoirs over the Upper Colorado River Basin, United States, we show that LSTM can accurately predict the reservoir releases with <italic>NSE</italic> ≥ 0.69 for all the considered reservoirs despite of their diverse storage sizes, functionality, elevations, etc. Additionally, SHAP indicates that storage and inflow are more influential than precipitation and temperature. Moreover, the storage and inflow show a relatively long-term influence on the release up to 7 days and this influence decreases as the lag time increases for most reservoirs. These findings from SHAP are consistent with our physical understanding. However, in a few reservoirs, SHAP gives some temporal importances that are difficult to interpret from a hydrological point of view, probably because of its ignorance of the variable interactions. SHAP is a useful tool for black-box ML model explanations, but the hydrological processes inferred from its results should be interpreted cautiously. More investigations of SHAP and its applications in hydrological modeling is needed and will be pursued in our future study. </p>},
+   author = {Ming Fan and Lujun Zhang and Siyan Liu and Tiantian Yang and Dan Lu},
+   doi = {10.3389/frwa.2023.1112970},
+   issn = {2624-9375},
+   journal = {Frontiers in Water},
+   keywords = {SHAP,deep learning,hydrometeorological factor,long short-term memory network,reservoir release,temporal importance},
+   month = {3},
+   title = {Investigation of hydrometeorological influences on reservoir releases using explainable machine learning methods},
+   volume = {5},
+   url = {https://www.frontiersin.org/articles/10.3389/frwa.2023.1112970/full},
+   year = {2023}
 }
