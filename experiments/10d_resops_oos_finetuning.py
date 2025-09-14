@@ -3,6 +3,12 @@
 ### COMPARE RESULTS OF INDIVIDUAL MODEL, POOLED MODEL, 
 ### AND FINETUNED MODEL ON LAST 20% OF RECORD (SAME TEST SET AS OTHER EXPERIMENTS) ###
 
+# Workaround: add directory of 'src' and 'ssjrb_wrapper' to the sys.path
+import os
+import sys
+file_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(file_dir, '..')) # One level up to the project root
+sys.path.append(parent_dir)
 
 import pandas as pd
 import numpy as np
@@ -22,6 +28,35 @@ from src.models.model_zoo import *
 from src.models.predict_model import *
 from src.models.train_model import *
 
+# GRanD Attributes
+import geopandas as gpd
+gdf = gpd.read_file("data/GRanD/GRanD_dams_v1_3.shp")
+gdf = gdf.drop(columns="geometry").set_index("GRAND_ID")
+
+# Main reservoir use
+use_ohe = pd.get_dummies(gdf['MAIN_USE'], prefix='USE', dtype='float')
+
+# DOR category (low, med, high)
+gdf['dor_cat'] = pd.cut(gdf['DOR_PC'], bins=[0, 50, 100, np.inf], labels=['Low', 'Medium', 'High'])
+dor_ohe = pd.get_dummies(gdf['dor_cat'], prefix='DOR', dtype='float')
+
+attribute_df = pd.concat([use_ohe, dor_ohe], axis=1)
+attribute_df.index = attribute_df.index.astype(int)
+
+def get_device():
+    # Check for MPS (Apple Silicon)
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        return torch.device("mps")
+    
+    # Check for CUDA
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    
+    # Default to CPU
+    else:
+        return torch.device("cpu")
+
+
 def get_left_years(res_list):
     """ 
     Get left data window years (first record year after leading NA) for each reservoir ID in res_list.
@@ -36,8 +71,7 @@ def get_left_years(res_list):
                                                 vars=['inflow', 'outflow', 'storage']).isna().idxmin().max().year
     return left_years_dict
 
-def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac=0.6, val_frac=0.2, test_frac=0.2, 
-                    log_names=[], return_scaler=False, storage=False):
+def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac=0.6, val_frac=0.2, test_frac=0.2, return_scaler=False, storage=False, attributes=None):
     """
     Run data processing pipeline for one ResOPS reservoir.
     Params:
@@ -45,38 +79,42 @@ def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac
     transform_type -- str, in preprocessing, whether to 'standardize' or 'normalize' the data
     left -- str (YYYY-MM-DD), beginning boundary of time window
     right -- str (YYYY-MM-DD), end boundary of time window
-    log_names -- list of column names (str) to take log of before running rest of pipeline. E.g. ['inflow', 'outflow', 'storage']
     return_scaler -- bool, whether or not to return src.data.data_processing.time_scaler() object
     storage -- bool, whether or not to include storage data in features
+    attributes -- pd.DataFrame, dataframe of one-hot encoded reservoir attributes to include as features
     """
 
     # Read in data, columns are [inflow, outflow, storage]
     df = resops_fetch_data(res_id=res_id, vars=['inflow', 'outflow', 'storage'])
     # Add day of the year (doy) as another column
-    df['doy'] = df.index.to_series().dt.dayofyear
+    df['doy'] = df.index.to_series().dt.dayofyear.astype('float')
+    # Add reservoir attributes if provided
+    if attributes is not None:
+        attr = attributes.loc[[res_id]]
+        attr = pd.concat([attr]*len(df), ignore_index=True)
+        attr.index = df.index
+        df = pd.concat([df, attr], axis=1)
     # Select data window
     df = df[left:right].copy()
 
-    # Take log of df columns that are in log_names
-    for column_name in df.columns:
-        if column_name in log_names:
-            df[column_name] = np.log(df[column_name])
-        else:
-            continue
+    # Get input feature column indices (including one-hot attribute features if provided)
+    base_input_cols = ['inflow', 'doy'] + (['storage'] if storage else [])
+    is_binary = (df.isin([0, 1]) | df.isna()).all(axis=0)     
+    one_hot_cols = [c for c, b in is_binary.items() if b and c not in base_input_cols and c != 'outflow']
+    input_idx = [df.columns.get_loc(c) for c in (base_input_cols + one_hot_cols)]
+
+    # Get output target column index
+    target_idx = [df.columns.get_loc('outflow')]
+
 
     # Run data processing pipeline
-    pipeline = processing_pipeline(train_frac=train_frac, val_frac=val_frac, test_frac=test_frac, 
-                                   chunk_size=3*365, pad_value=-1, transform_type=transform_type, fill_na_method='mean')
+    pipeline = processing_pipeline(train_frac=train_frac, val_frac=val_frac, test_frac=test_frac, chunk_size=3*365, pad_value=-1, transform_type=transform_type, fill_na_method='mean')
     # Train/val/test tensors of shape (#chunks, chunksize, [inflow, outflow, storage, doy])
     ts_train, ts_val, ts_test = pipeline.process_data(df) 
 
     # Separate inputs(X) and targets (y)
-    if storage:
-        X_train, X_val, X_test = ts_train[:, :, [0, 2, 3]], ts_val[:, :, [0, 2, 3]], ts_test[:, :, [0, 2, 3]]
-    else:
-        X_train, X_val, X_test = ts_train[:, :, [0, 3]], ts_val[:, :, [0, 3]], ts_test[:, :, [0, 3]]
-    # select outflow as target feature
-    y_train, y_val, y_test = ts_train[:, :, [1]], ts_val[:, :, [1]], ts_test[:, :, [1]]
+    X_train, X_val, X_test = ts_train[:, :, input_idx], ts_val[:, :, input_idx], ts_test[:, :, input_idx]
+    y_train, y_val, y_test = ts_train[:, :, target_idx], ts_val[:, :, target_idx], ts_test[:, :, target_idx]
 
     if return_scaler:
         return (X_train, y_train), (X_val, y_val), (X_test, y_test), pipeline.scaler
@@ -86,14 +124,16 @@ def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac
 
 class multi_reservoir_data:
     """Store and combine data from multiple in sample and out of sample reservoirs"""
-    def __init__(self, left_years_dict, res_list):
+    def __init__(self, left_years_dict, res_list, attributes=None):
         """ 
         Params:
         left_years_dict: dict, dictionary of year of first available data from each requested reservoir (name : year)
         res_list: list of ResOps reservoir ID's of interest
+        attributes: pd.DataFrame, dataframe of one-hot encoded reservoir attributes to include as features
         """
         self.left_years_dict = left_years_dict
         self.res_list = res_list
+        self.attributes = attributes
 
         self.X_train_dict = {}
         self.y_train_dict = {}
@@ -105,12 +145,11 @@ class multi_reservoir_data:
         return
     
     def fetch_data(self):
-        """Fetch data for each reservoir. For in-sample reservoirs: split into train/val tensors. For oos reservors: reshape data into test tensors"""
         # Run data processing for each reservoir
         for reservoir, left_year in tqdm(self.left_years_dict.items(), desc='Processing data: '):
             result = data_processing(res_id=reservoir, transform_type='standardize', train_frac=0.6, val_frac=0.2, test_frac=0.2,
                                     left=f'{left_year}-01-01', right='2020-12-31',
-                                    return_scaler=True)
+                                    return_scaler=True, attributes=self.attributes)
             # Save results
             self.X_train_dict[reservoir] = result[0][0] # (# chunks, chunk size, # features (e.g. inflow and doy))
             self.y_train_dict[reservoir] = result[0][1] # (# chunks, chunk size, 1 (outflow))
@@ -148,7 +187,8 @@ def finetune_first_nyears(res_id, left_year, nyears):
     finetuned_model
     """
     # Load multi-reservoir model, instantiate loss and optimizer
-    input_size = 2
+    # input_size = 2
+    input_size = 2 + attribute_df.shape[1]  # Add number of one-hot encoded attributes to input size
     hidden_size1 = 30
     hidden_size2 = 15
     output_size = 1
@@ -159,14 +199,14 @@ def finetune_first_nyears(res_id, left_year, nyears):
                                 hidden_size2=hidden_size2, output_size=output_size, 
                                 num_layers=num_layers, dropout_prob=dropout_prob)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
     model.load_state_dict(torch.load('src/models/saved_models/resops_simul_model.pt'))
 
     # Get train and validation data for first n years of data
     data_result = data_processing(res_id=res_id, transform_type='standardize', 
                                   train_frac=0.75, val_frac=0.25, test_frac=0,
                                   left=f'{left_year}-01-01', right=f'{left_year + nyears - 1}-12-31',
-                                  return_scaler=True)
+                                  return_scaler=True, attributes=attribute_df)
     dataset_train, dataset_val = (TensorDataset(*data_result[0]), TensorDataset(*data_result[1]))
     dataloader_train, dataloader_val = (DataLoader(dataset_train, batch_size=1, shuffle=False), 
                                         DataLoader(dataset_val, batch_size=1, shuffle=False))
@@ -186,7 +226,7 @@ def main():
     # Get final 20% of data record as test set, initialize dataframe to store results comparing
     # individual training, multi-reservoir model, and finetuning
     # Recall that 60/20/20 was the default train/val/test set, so we can just extract the test data
-    complete_data_record = multi_reservoir_data(left_years_dict=left_year_dict, res_list=res_list)
+    complete_data_record = multi_reservoir_data(left_years_dict=left_year_dict, res_list=res_list, attributes=attribute_df)
     complete_data_record.fetch_data()
     X_test_dict = complete_data_record.X_test_dict
     y_test_dict = complete_data_record.y_test_dict
@@ -204,7 +244,8 @@ def main():
     final_results.loc[res_list, 'individual'] = individual_r2.loc[res_list, 'test']
     
     # Get pooled model R2 on last 20% of record (test set)
-    input_size = 2
+    # input_size = 2
+    input_size = 2 + attribute_df.shape[1]  # Add number of one-hot encoded attributes to input size
     hidden_size1 = 30
     hidden_size2 = 15
     output_size = 1
@@ -226,6 +267,7 @@ def main():
         for res in res_list:
             # Finetune model to res
             finetuned_model = finetune_first_nyears(res_id=res, left_year=left_year_dict[res], nyears=first_nyears)
+            finetuned_model.to(torch.device("cpu")) # Move model to CPU for evaluation
             # Save R2 on test
             final_results.loc[res, f'finetuned_pooled_{first_nyears}yr'] = r2_score_tensor(model=finetuned_model,
                                                                                            X=X_test_dict[res],

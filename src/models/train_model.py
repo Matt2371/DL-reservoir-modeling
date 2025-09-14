@@ -111,7 +111,7 @@ class EarlyStopper:
                 return True
         return False
     
-def training_loop(model, criterion, optimizer, patience, dataloader_train, dataloader_val, epochs):
+def training_loop(model, criterion, optimizer, patience, dataloader_train, dataloader_val, epochs, device=torch.device("cpu")):
     """
     Run full training loop with early stopping.
     Params:
@@ -122,11 +122,17 @@ def training_loop(model, criterion, optimizer, patience, dataloader_train, datal
     dataloader_train -- PyTorch Dataloader for training data
     dataloader_val -- PyTorch Dataloader for validation data
     epochs -- maximum number of training epochs
+    device -- torch.device ("cpu", "mps", "cuda") to train model
 
     Returns:
     train_losses -- average training losses for each epoch
     val_losses -- average validation losses for each epoch
     """
+    # Move model to device
+    model.to(device)
+    # Move data to device
+    dataloader_train.dataset.tensors = tuple(tensor.to(device) for tensor in dataloader_train.dataset.tensors)
+    dataloader_val.dataset.tensors = tuple(tensor.to(device) for tensor in dataloader_val.dataset.tensors)
 
     num_epochs = epochs
     train_losses = [] # keep track of training and val losses for Model 1
