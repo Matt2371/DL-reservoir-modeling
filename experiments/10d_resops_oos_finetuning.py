@@ -17,6 +17,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
+import geopandas as gpd
 from math import floor
 import os
 import copy
@@ -28,20 +29,37 @@ from src.models.model_zoo import *
 from src.models.predict_model import *
 from src.models.train_model import *
 
-# GRanD Attributes
-import geopandas as gpd
-gdf = gpd.read_file("data/GRanD/GRanD_dams_v1_3.shp")
-gdf = gdf.drop(columns="geometry").set_index("GRAND_ID")
+def get_attributes(index_type=str):
+    """
+    Get one-hot encorded reservoir attributes df (main use from GRanD, DOR category from mean-inflow/max-storage or GRanD DOR_PC)
+    Params:
+    index_type -- type of index for returned dataframe, either str or int
+    """
+    # GRanD Attributes
+    gdf = gpd.read_file("data/GRanD/GRanD_dams_v1_3.shp")
+    gdf = gdf.drop(columns="geometry").set_index("GRAND_ID")
 
-# Main reservoir use
-use_ohe = pd.get_dummies(gdf['MAIN_USE'], prefix='USE', dtype='float')
+    # Main reservoir use
+    use_ohe = pd.get_dummies(gdf['MAIN_USE'], prefix='USE', dtype='float')
+    use_ohe.index = use_ohe.index.astype(str)
 
-# DOR category (low, med, high)
-gdf['dor_cat'] = pd.cut(gdf['DOR_PC'], bins=[0, 50, 100, np.inf], labels=['Low', 'Medium', 'High'])
-dor_ohe = pd.get_dummies(gdf['dor_cat'], prefix='DOR', dtype='float')
+    # DOR category (based on log(mean inflow / max storage))
+    df_inflow = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_INFLOW_CUMECS.csv", 
+                            parse_dates=True, index_col=0, dtype=np.float32)
+    df_storage = pd.read_csv("data/ResOpsUS/time_series_single_variable_table/DAILY_AV_STORAGE_MCM.csv", 
+                            parse_dates=True, index_col=0, dtype=np.float32)
+    df_result = pd.concat([df_inflow.mean(skipna=True), 
+                           df_storage.max()], axis=1, join='inner')
+    df_result.columns = ['mean_inflow', 'max_storage']
 
-attribute_df = pd.concat([use_ohe, dor_ohe], axis=1)
-attribute_df.index = attribute_df.index.astype(int)
+    df_result['log_mean_inflow_max_storage'] = np.log(df_result['mean_inflow'] / df_result['max_storage'])
+    df_result['log_mean_inflow_max_storage_cat'] = pd.cut(df_result['log_mean_inflow_max_storage'], bins=[-np.inf,-3.79, -3.17, -2.46, np.inf], labels=['very_high', 'high', 'medium', 'low'])
+    dor_ohe = pd.get_dummies(df_result['log_mean_inflow_max_storage_cat'], prefix='DOR', dtype='float')
+
+    attribute_df = use_ohe.join(dor_ohe, how='left')
+    attribute_df.index = attribute_df.index.astype(index_type)
+    return attribute_df
+
 
 def get_device():
     # Check for MPS (Apple Silicon)
@@ -175,7 +193,7 @@ def r2_score_tensor(model, X, y):
     r2 = r2_score(y_pred=y_hat, y_true=y)
     return r2
 
-def finetune_first_nyears(res_id, left_year, nyears):
+def finetune_first_nyears(res_id, left_year, nyears, attributes=None, baseline=False):
     """
     Finetune trained pooled model (from experiment 10c) 
     based on the first n years of data
@@ -183,12 +201,16 @@ def finetune_first_nyears(res_id, left_year, nyears):
     res_id: reservoir to finetune to
     left_year: left year of data window, i.e. first year of data record
     nyears: first n years of data from reservoir to use for finetuning
+    attributes: pd.DataFrame, dataframe of one-hot encoded reservoir attributes to include as features (in data processing)
+    baseline: bool, if True, do not finetune, train new model from scratch
     Returns:
     finetuned_model
     """
     # Load multi-reservoir model, instantiate loss and optimizer
-    # input_size = 2
-    input_size = 2 + attribute_df.shape[1]  # Add number of one-hot encoded attributes to input size
+    if attributes is not None:
+        input_size = 2 + attributes.shape[1]  # Add number of one-hot encoded attributes to input size
+    else:
+        input_size = 2  # inflow and doy only
     hidden_size1 = 30
     hidden_size2 = 15
     output_size = 1
@@ -199,14 +221,15 @@ def finetune_first_nyears(res_id, left_year, nyears):
                                 hidden_size2=hidden_size2, output_size=output_size, 
                                 num_layers=num_layers, dropout_prob=dropout_prob)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
-    model.load_state_dict(torch.load('src/models/saved_models/resops_simul_model.pt'))
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    if not baseline:
+        model.load_state_dict(torch.load('src/models/saved_models/resops_simul_model.pt', weights_only=True))
 
     # Get train and validation data for first n years of data
     data_result = data_processing(res_id=res_id, transform_type='standardize', 
                                   train_frac=0.75, val_frac=0.25, test_frac=0,
                                   left=f'{left_year}-01-01', right=f'{left_year + nyears - 1}-12-31',
-                                  return_scaler=True, attributes=attribute_df)
+                                  return_scaler=True, attributes=attributes)
     dataset_train, dataset_val = (TensorDataset(*data_result[0]), TensorDataset(*data_result[1]))
     dataloader_train, dataloader_val = (DataLoader(dataset_train, batch_size=1, shuffle=False), 
                                         DataLoader(dataset_val, batch_size=1, shuffle=False))
@@ -219,6 +242,9 @@ def finetune_first_nyears(res_id, left_year, nyears):
     return model
 
 def main():
+    # Get one-hot encoded reservoir attributes dataframe
+    attribute_df = get_attributes(index_type=int)
+
     # Read list of out-of-sample reservoirs from experiment 10c, get left years dictionary
     res_list = pd.read_csv('report/results/resops_training/resops_oos_out_of_sample_test.csv', index_col=0).index.to_list()
     left_year_dict = get_left_years(res_list=res_list)
@@ -238,6 +264,12 @@ def main():
                                                           'finetuned_pooled_20yr',
                                                           'finetuned_pooled_25yr',
                                                           'finetuned_pooled_30yr'])
+    baseline_results = pd.DataFrame(index=res_list, columns=['baseline_5yr',
+                                                              'baseline_10yr',
+                                                              'baseline_15yr',
+                                                              'baseline_20yr',
+                                                              'baseline_25yr',
+                                                              'baseline_30yr'])
     
     # Get individual model R2 on last 20% of record (test set)
     individual_r2 = pd.read_csv('report/results/resops_training/resops_individual_r2.csv', index_col=0)
@@ -255,7 +287,7 @@ def main():
     model_pooled = LSTMModel1_opt(input_size=input_size, hidden_size1=hidden_size1, 
                                 hidden_size2=hidden_size2, output_size=output_size, 
                                 num_layers=num_layers, dropout_prob=dropout_prob)
-    model_pooled.load_state_dict(torch.load('src/models/saved_models/resops_simul_model.pt'))
+    model_pooled.load_state_dict(torch.load('src/models/saved_models/resops_simul_model.pt', weights_only=True))
     for res in res_list:
         final_results.loc[res, 'pooled'] = r2_score_tensor(model=model_pooled,
                                                                 X=X_test_dict[res],
@@ -266,14 +298,21 @@ def main():
     for first_nyears in finetune_year_list:
         for res in res_list:
             # Finetune model to res
-            finetuned_model = finetune_first_nyears(res_id=res, left_year=left_year_dict[res], nyears=first_nyears)
+            finetuned_model = finetune_first_nyears(res_id=res, left_year=left_year_dict[res], nyears=first_nyears, attributes=attribute_df)
             finetuned_model.to(torch.device("cpu")) # Move model to CPU for evaluation
-            # Save R2 on test
+            # Finetuned R2 on test
             final_results.loc[res, f'finetuned_pooled_{first_nyears}yr'] = r2_score_tensor(model=finetuned_model,
                                                                                            X=X_test_dict[res],
                                                                                            y=y_test_dict[res])
+            # Baseline model (no pretraining) R2 on test
+            baseline_model = finetune_first_nyears(res_id=res, left_year=left_year_dict[res], nyears=first_nyears, attributes=attribute_df, baseline=True)
+            baseline_model.to(torch.device("cpu")) # Move model to CPU for evaluation
+            baseline_results.loc[res, f'baseline_{first_nyears}yr'] = r2_score_tensor(model=baseline_model,
+                                                                                      X=X_test_dict[res],
+                                                                                      y=y_test_dict[res])
     # Save final results
     final_results.to_csv('report/results/resops_training/resops_oos_finetuning.csv')
+    baseline_results.to_csv('report/results/resops_training/resops_oos_finetuning_baseline.csv')
     return
 
 # run script
