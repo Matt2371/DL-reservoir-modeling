@@ -177,21 +177,6 @@ class multi_reservoir_data:
             self.y_test_dict[reservoir] = result[2][1]
             self.scaler_dict[reservoir] = result[3]
         return
-    
-
-def r2_score_tensor(model, X, y):
-    """
-    Evaluate r2 score.
-    X -- input tensor of shape (# batches, batch size, # features)
-    y -- target tensor of shape (# batches, batch size, 1)
-    """
-    # Get predictions
-    y_hat = predict(model, X)
-    # Flatten and remove padding values
-    y_hat, y = flatten_rm_pad(y_hat=y_hat, y=y)
-    # Find R2
-    r2 = r2_score(y_pred=y_hat, y_true=y)
-    return r2
 
 def finetune_first_nyears(res_id, left_year, nyears, attributes=None, baseline=False):
     """

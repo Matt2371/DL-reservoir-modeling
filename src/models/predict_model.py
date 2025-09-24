@@ -181,3 +181,17 @@ def eval_train_val_test(model, X_train, X_val, X_test, y_train, y_val, y_test):
 
     return r2_train, r2_val, r2_test
 
+def r2_score_tensor(model, X, y):
+    """
+    Evaluate r2 score on arbitrary X, y tensors.
+    X -- input tensor of shape (# batches, batch size, # features)
+    y -- target tensor of shape (# batches, batch size, 1)
+    """
+    # Get predictions
+    y_hat = predict(model, X)
+    # Flatten and remove padding values
+    y_hat, y = flatten_rm_pad(y_hat=y_hat, y=y)
+    # Find R2
+    r2 = r2_score(y_pred=y_hat, y_true=y)
+    return r2
+

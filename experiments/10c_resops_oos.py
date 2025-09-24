@@ -140,12 +140,13 @@ def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac
 
 class multi_reservoir_data_oos:
     """Store and combine data from multiple in sample and out of sample reservoirs"""
-    def __init__(self, left_years_dict, res_list, oos_list, attributes=None):
+    def __init__(self, left_years_dict, res_list, oos_list, storage=False, attributes=None):
         """ 
         Params:
         left_years_dict: dict, dictionary of year of first available data from each requested reservoir (name : year)
         res_list: list of ResOps reservoir ID's of interest
         oos_list: list of out-of-sample ResOps reservoir ID's (subset of res_list)
+        storage: bool, whether or not to include storage data as a feature in data processing (default False)
         attributes: pd.DataFrame, dataframe of one-hot encoded reservoir attributes to include as features
         """
         self.left_years_dict = left_years_dict
@@ -153,6 +154,7 @@ class multi_reservoir_data_oos:
         self.oos_list = oos_list # out of sample reservoirs
         self.is_list = [item for item in res_list if item not in oos_list] # in sample reservoirs
         self.attributes = attributes
+        self.storage = storage
 
         # For in-sample reservoirs: collect train and val tensors and their respective src.data.data_processing.time_scaler() objects
         self.X_train_dict = {}
@@ -175,7 +177,7 @@ class multi_reservoir_data_oos:
             if reservoir in self.oos_list:
                 result = data_processing(res_id=reservoir, transform_type='standardize', train_frac=1, val_frac=0, test_frac=0,
                                     left=f'{left_year}-01-01', right='2020-12-31',
-                                    return_scaler=True, attributes=self.attributes)
+                                    return_scaler=True, storage=self.storage, attributes=self.attributes)
                 self.X_test_dict[reservoir] = result[0][0]
                 self.y_test_dict[reservoir] = result[0][1]
                 self.scaler_dict_is[reservoir] = result[3]
@@ -184,7 +186,7 @@ class multi_reservoir_data_oos:
             else:
                 result = data_processing(res_id=reservoir, transform_type='standardize', train_frac=0.75, val_frac=0.25, test_frac=0,
                                         left=f'{left_year}-01-01', right='2020-12-31',
-                                        return_scaler=True, attributes=self.attributes)
+                                        return_scaler=True, storage=self.storage, attributes=self.attributes)
                 # Save results
                 self.X_train_dict[reservoir] = result[0][0] # (# chunks, chunk size, # features (e.g. inflow and doy))
                 self.y_train_dict[reservoir] = result[0][1] # (# chunks, chunk size, 1 (outflow))
@@ -244,20 +246,6 @@ def train_simultaneous_model(X_train, y_train, X_val, y_val, plot=False, device=
         plt.show()
 
     return model
-
-def r2_score_tensor(model, X, y):
-    """
-    Evaluate r2 score.
-    X -- input tensor of shape (# batches, batch size, # features)
-    y -- target tensor of shape (# batches, batch size, 1)
-    """
-    # Get predictions
-    y_hat = predict(model, X)
-    # Flatten and remove padding values
-    y_hat, y = flatten_rm_pad(y_hat=y_hat, y=y)
-    # Find R2
-    r2 = r2_score(y_pred=y_hat, y_true=y)
-    return r2
     
 def main():
     # Set the device
@@ -269,6 +257,7 @@ def main():
 
     # Get list of reservoir ID of interest
     res_list = filter_res()
+    
     # Randomly choose out of sample reservoirs
     np.random.seed(0)
     oos_list = np.random.choice(a=sorted(res_list, key=int), size=round(0.3 * len(res_list)), replace=False)
