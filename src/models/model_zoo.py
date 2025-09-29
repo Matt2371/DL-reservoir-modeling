@@ -20,7 +20,7 @@ def lstm_unroll(lstm_cell, hidden_size, input):
     # get dimensions
     N, L, Hin = input.shape # (batch size, timesteps, input size)
     # initialize hidden, cell states
-    hx, cx = torch.zeros(N, hidden_size), torch.zeros(N, hidden_size) # (batch, hidden size)
+    hx, cx = torch.zeros(N, hidden_size, device=input.device), torch.zeros(N, hidden_size, device=input.device) # (batch, hidden size)
 
     output = [] # store sequence of hidden states
     cell_states = [] # store sequence of cell states
@@ -171,8 +171,8 @@ class LSTMModel2(nn.Module):
         # get dimensions
         N, L, Hin = x.shape # input shape is (batch size, timesteps, input size)
         # initialize hidden, cell states for lstmcell (layer 2 is optionally used)
-        hx_1, cx_1 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
-        hx_2, cx_2 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
+        hx_1, cx_1 = torch.zeros(N, self.hidden_size1, device=x.device), torch.zeros(N, self.hidden_size1, device=x.device) # (batch, hidden size)
+        hx_2, cx_2 = torch.zeros(N, self.hidden_size1, device=x.device), torch.zeros(N, self.hidden_size1, device=x.device) # (batch, hidden size)
 
         hidden_states_1 = [] # store sequence of hidden states for layer 1
         cell_states_1 = [] # store sequence of cell states for layer 1
@@ -181,7 +181,7 @@ class LSTMModel2(nn.Module):
         output = [] # store predictions
 
         # initialize previous output (batch size, output size)
-        prev_output = self.inital_output * torch.ones((N, 1)) 
+        prev_output = self.inital_output * torch.ones((N, 1), device=x.device) 
 
         for i in range(L):
             # append previous output to input of current timestep: (batch size, input size) -> (batch size, input size + 1)
@@ -278,8 +278,8 @@ class LSTMModel3(nn.Module):
         N, L, Hin = x.shape # input shape is (batch size, timesteps, input size)
         # initialize hidden, cell states
         # initialize hidden, cell states for lstmcell (layer 2 is optionally used)
-        hx_1, cx_1 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
-        hx_2, cx_2 = torch.zeros(N, self.hidden_size1), torch.zeros(N, self.hidden_size1) # (batch, hidden size)
+        hx_1, cx_1 = torch.zeros(N, self.hidden_size1, device=x.device), torch.zeros(N, self.hidden_size1, device=x.device) # (batch, hidden size)
+        hx_2, cx_2 = torch.zeros(N, self.hidden_size1, device=x.device), torch.zeros(N, self.hidden_size1, device=x.device) # (batch, hidden size)
 
         hidden_states_1 = [] # store sequence of hidden states for layer 1
         cell_states_1 = [] # store sequence of cell states for layer 1
@@ -287,8 +287,8 @@ class LSTMModel3(nn.Module):
         cell_states_2 = [] # store sequence of cell states for layer 2
         implied_storages = [] # store sequence of implied storages
         output = [] # store predictions
-        prev_output = self.inital_output * torch.ones((N, 1)) # initialize previous output (batch size, output size=1)
-        prev_implied_storage = self.initial_implied_storage * torch.ones((N, 1)) # initialize previous implied storage (batch size, output size=1)
+        prev_output = self.inital_output * torch.ones((N, 1), device=x.device) # initialize previous output (batch size, output size=1)
+        prev_implied_storage = self.initial_implied_storage * torch.ones((N, 1), device=x.device) # initialize previous implied storage (batch size, output size=1)
 
         for i in range(L):
             # calculate current implied storage: prev storage + current inflow - prev output
@@ -392,11 +392,11 @@ class resRNN(nn.Module):
         output = [] # store predictions
 
         # initialize previous output (batch size, output size)
-        prev_output = self.inital_output * torch.ones((N, self.output_size))
+        prev_output = self.inital_output * torch.ones((N, self.output_size), device=x.device)
         # initialize previous implied storage (batch size, output size)
-        prev_implied_storage = self.initial_implied_storage * torch.ones((N, self.output_size))
+        prev_implied_storage = self.initial_implied_storage * torch.ones((N, self.output_size), device=x.device)
         # initialize hidden state
-        hx = torch.zeros(N, self.hidden_size) # (batch size, hidden size)
+        hx = torch.zeros(N, self.hidden_size, device=x.device) # (batch size, hidden size)
 
         for i in range(L):
             # calculate current implied storage: prev storage + current inflow - prev output
