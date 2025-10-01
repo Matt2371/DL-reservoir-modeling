@@ -8,6 +8,17 @@ from tqdm import tqdm
 #### FUNCTIONS AND CLASSES TO ASSIST WITH MODEL TRAINING AND VALIDATION ####
 #### RUN TRAINING_LOOP() FUNCTION TO TRAIN MODEL WITH EARLY STOPPING ####
 
+def get_device():
+    # Check for MPS (Apple Silicon)
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        return torch.device("mps")
+    # Check for CUDA
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    # Default to CPU
+    else:
+        return torch.device("cpu")
+
 def create_mask(x, pad_value=-1):
     """Create mask to hide padded outputs from the loss function"""
 
