@@ -61,33 +61,6 @@ def get_attributes(index_type=str):
     attribute_df.index = attribute_df.index.astype(index_type)
     return attribute_df
 
-def get_device():
-    # Check for MPS (Apple Silicon)
-    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        return torch.device("mps")
-    
-    # Check for CUDA
-    elif torch.cuda.is_available():
-        return torch.device("cuda")
-    
-    # Default to CPU
-    else:
-        return torch.device("cpu")
-
-def get_left_years(res_list):
-    """ 
-    Get left data window years (first record year after leading NA) for each reservoir ID in res_list.
-    Return results as dictionary
-    Params:
-    res_list -- list of ResOPS ID's to fetch left years for
-    """
-    # For each filtered reservoir, find first year of avail record after leading NA (left year window)
-    left_years_dict = {}
-    for res in res_list:
-        left_years_dict[res] = resops_fetch_data(res_id=res, 
-                                                vars=['inflow', 'outflow', 'storage']).isna().idxmin().max().year
-    return left_years_dict
-
 def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac=0.6, val_frac=0.2, test_frac=0.2, return_scaler=False, storage=False, attributes=None):
     """
     Run data processing pipeline for one ResOPS reservoir.

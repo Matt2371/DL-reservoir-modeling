@@ -33,21 +33,6 @@ from src.models.model_zoo import LSTMModel1_opt
 from src.models.train_model import *
 from src.models.predict_model import *
 
-
-def get_left_years(res_list):
-    """ 
-    Get left data window years (first record year after leading NA) for each reservoir ID in res_list.
-    Return results as dictionary
-    Params:
-    res_list -- list of ResOPS ID's to fetch left years for
-    """
-    # For each filtered reservoir, find first year of avail record after leading NA (left year window)
-    left_years_dict = {}
-    for res in res_list:
-        left_years_dict[res] = resops_fetch_data(res_id=res, 
-                                                vars=['inflow', 'outflow', 'storage']).isna().idxmin().max().year
-    return left_years_dict
-
 def fit_one_reservoir(res_id, left, right = '2020-12-31'):
     """
     Fit SSJRB reservoir model to a single reservoir for ResOPS data

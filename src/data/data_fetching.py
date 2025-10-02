@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-#### READING DATA ####
+############## READING DATA ##################
 
 def usbr_fetch_data(name="Shasta", vars = ['inflow', 'outflow', 'storage']):
     """
@@ -38,6 +38,8 @@ def resops_fetch_data(res_id, vars = ['inflow', 'outflow', 'storage']):
     df = df[vars]
     return df
 
+########## SUPPORTING FUNCTIONS ##############
+
 def filter_res(record_frac=0.9):
     """
     Filter ResOPS reservoir ID's that have at least some percentage (default 90%) 
@@ -57,3 +59,49 @@ def filter_res(record_frac=0.9):
                     & set(df_storage.dropna(thresh=thresh, axis=1).columns))
     
     return res_list
+
+def split_df_data(id, left, right='2020-12-31', data_splits=(0.6, 0.2, 0.2)):
+    """
+    Fetch original df data for one ResOPS or USBR reservoir in given time window, split into train/val/test portions.
+    Params:
+    id -- str, ResOPS reservoir ID (numeric) or USBR name (character)
+    left -- str (YYYY-MM-DD), beginning boundary of time window
+    right -- str (YYYY-MM-DD), end boundary of time window
+    data_splits -- tuple of floats, (train_frac, val_frac, test_frac) for data splits
+    """
+    # Read in data, columns are [inflow, outflow, storage]
+    if id.isdigit():
+        df = resops_fetch_data(res_id=id, vars=['inflow', 'outflow', 'storage'])
+    else:
+        df = usbr_fetch_data(name=id, vars=['inflow', 'outflow', 'storage'])
+
+    # Select data window
+    df = df[left:right].copy()
+
+    assert sum(data_splits) == 1.0, "data_splits must sum to 1.0"
+
+    # Lengths of train/val/test sets
+    original_train_len = int(round(df.shape[0] * data_splits[0]))
+    original_val_len = int(round(df.shape[0] * data_splits[1]))
+    original_test_len = df.shape[0] - (original_train_len + original_val_len)
+
+    # Get data, shape is (timesteps, )
+    df_train = df.iloc[:original_train_len, :]
+    df_val = df.iloc[original_train_len:(original_train_len+original_val_len), :]
+    df_test = df.iloc[(original_train_len+original_val_len):, :]
+
+    return df_train, df_val, df_test
+
+def get_left_years(res_list):
+    """ 
+    ResOPS: Get left data window years (first record year after leading NA) for each reservoir ID in res_list.
+    Return results as dictionary
+    Params:
+    res_list -- list of ResOPS ID's to fetch left years for
+    """
+    # For each filtered reservoir, find first year of avail record after leading NA (left year window)
+    left_years_dict = {}
+    for res in res_list:
+        left_years_dict[res] = resops_fetch_data(res_id=res, 
+                                                vars=['inflow', 'outflow', 'storage']).isna().idxmin().max().year
+    return left_years_dict
