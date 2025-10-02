@@ -111,7 +111,7 @@ def fit_one_reservoir(res_id, left, right = '2020-12-31'):
                             'test': r2_score(df_test[f'{res_id}_outflow_cfs'], df_hat_test[f'{res_id}_outflow_cfs'])}, index=[res_id])
 
     # Save model parameters
-    model_i.save_params(filepath='./results/saved_models/resops_ssjrb_reservoir', fileprefix=f'resops_ssjrb_model_{res_id}')
+    model_i.save_params(filepath='src/models/saved_models/resops_rule_models', fileprefix=f'resops_ssjrb_model_{res_id}')
 
     return model_i, r2_scores
 
