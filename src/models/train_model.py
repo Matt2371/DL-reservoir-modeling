@@ -8,6 +8,17 @@ from tqdm import tqdm
 #### FUNCTIONS AND CLASSES TO ASSIST WITH MODEL TRAINING AND VALIDATION ####
 #### RUN TRAINING_LOOP() FUNCTION TO TRAIN MODEL WITH EARLY STOPPING ####
 
+def get_device():
+    # Check for MPS (Apple Silicon)
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        return torch.device("mps")
+    # Check for CUDA
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    # Default to CPU
+    else:
+        return torch.device("cpu")
+
 def create_mask(x, pad_value=-1):
     """Create mask to hide padded outputs from the loss function"""
 
@@ -111,7 +122,7 @@ class EarlyStopper:
                 return True
         return False
     
-def training_loop(model, criterion, optimizer, patience, dataloader_train, dataloader_val, epochs):
+def training_loop(model, criterion, optimizer, patience, dataloader_train, dataloader_val, epochs, device=torch.device("cpu")):
     """
     Run full training loop with early stopping.
     Params:
@@ -122,11 +133,17 @@ def training_loop(model, criterion, optimizer, patience, dataloader_train, datal
     dataloader_train -- PyTorch Dataloader for training data
     dataloader_val -- PyTorch Dataloader for validation data
     epochs -- maximum number of training epochs
+    device -- torch.device ("cpu", "mps", "cuda") to train model
 
     Returns:
     train_losses -- average training losses for each epoch
     val_losses -- average validation losses for each epoch
     """
+    # Move model to device
+    model.to(device)
+    # Move data to device
+    dataloader_train.dataset.tensors = tuple(tensor.to(device) for tensor in dataloader_train.dataset.tensors)
+    dataloader_val.dataset.tensors = tuple(tensor.to(device) for tensor in dataloader_val.dataset.tensors)
 
     num_epochs = epochs
     train_losses = [] # keep track of training and val losses for Model 1

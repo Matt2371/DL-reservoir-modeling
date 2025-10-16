@@ -191,15 +191,27 @@ class processing_pipeline():
         """
         # 1. Split into training/validation/testing sets
         df_train, df_val, df_test = train_val_test(data=data, train_frac=self.train_frac, val_frac=self.val_frac, test_frac=self.test_frac)
-        # 2. Scale the data using the training set
-        self.scaler.fit(df_train)
-        df_train, df_val, df_test = (self.scaler.transform(df_train), self.scaler.transform(df_val), 
-                                     self.scaler.transform(df_test))
+        df_train, df_val, df_test = df_train.astype('float'), df_val.astype('float'), df_test.astype('float') # cast data to float
+
+        # 2. Scale the data using the training set (only for non-binary columns)
+        is_binary = (df_train.isin([0, 1]) | df_train.isna()).all(axis=0)        
+        nonbin_cols = df_train.columns[~is_binary]
+        self.scaler.fit(df_train[nonbin_cols])
+        df_train.loc[:, nonbin_cols] = self.scaler.transform(df_train[nonbin_cols])
+        df_val.loc[:,   nonbin_cols] = self.scaler.transform(df_val[nonbin_cols])
+        df_test.loc[:,  nonbin_cols] = self.scaler.transform(df_test[nonbin_cols])
+
+        # self.scaler.fit(df_train)
+        # df_train, df_val, df_test = (self.scaler.transform(df_train), self.scaler.transform(df_val), 
+        #                              self.scaler.transform(df_test))
+
         # 3. Fill nan with mean from training data
         df_train, df_val, df_test = (self.filler.fill_nan(data=df_train, training_data=df_train), 
                                      self.filler.fill_nan(df_val, training_data=df_train), self.filler.fill_nan(df_test, training_data=df_train))
+        
         # 4. Convert data to PyTorch tensors (from numpy array)
         ts_train, ts_val, ts_test = torch.tensor(df_train, dtype=torch.float), torch.tensor(df_val, dtype=torch.float), torch.tensor(df_test, dtype=torch.float)
+
         # 5. Split data into chunks and pad the remainder (for training and validation sets)
         ts_train, ts_val, ts_test = (split_and_pad(ts_train, chunk_size=self.chunk_size), 
                                      split_and_pad(ts_val, chunk_size=self.chunk_size), 

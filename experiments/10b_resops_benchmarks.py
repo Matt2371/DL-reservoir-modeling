@@ -17,20 +17,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
 
-def get_left_years(res_list):
-    """ 
-    Get left data window years (first record year after leading NA) for each reservoir ID in res_list.
-    Return results as dictionary
-    Params:
-    res_list -- list of ResOPS ID's to fetch left years for
-    """
-    # For each filtered reservoir, find first year of avail record after leading NA (left year window)
-    left_years_dict = {}
-    for res in res_list:
-        left_years_dict[res] = resops_fetch_data(res_id=res, 
-                                                vars=['inflow', 'outflow', 'storage']).isna().idxmin().max().year
-    return left_years_dict
-
 def data_processing(res_id, left_year, right_year=2020, train_frac=0.6, val_frac=0.2, test_frac=0.2, log_names=[], return_scaler=False, storage=False):
     """
     Run data processing pipeline for one ResOPS reservoir.

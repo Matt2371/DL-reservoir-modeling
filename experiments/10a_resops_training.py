@@ -1,6 +1,13 @@
 ### TRAIN LSTM MODEL 1A FOR SELECTED RESOPS RESERVOIRS INDIVIDUALLY, SAVE R2 METRICS FOR EACH ###
 ### DO THE SAME FOR MODEL WITH STORAGE (MODEL 1*) TO COMPARE ###
 
+# Workaround: add directory of 'src' and 'ssjrb_wrapper' to the sys.path
+import os
+import sys
+file_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(file_dir, '..')) # One level up to the project root
+sys.path.append(parent_dir)
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,20 +24,6 @@ from src.data.data_fetching import *
 from src.models.model_zoo import *
 from src.models.predict_model import *
 from src.models.train_model import *
-
-def get_left_years(res_list):
-    """ 
-    Get left data window years (first record year after leading NA) for each reservoir ID in res_list.
-    Return results as dictionary
-    Params:
-    res_list -- list of ResOPS ID's to fetch left years for
-    """
-    # For each filtered reservoir, find first year of avail record after leading NA (left year window)
-    left_years_dict = {}
-    for res in res_list:
-        left_years_dict[res] = resops_fetch_data(res_id=res, 
-                                                vars=['inflow', 'outflow', 'storage']).isna().idxmin().max().year
-    return left_years_dict
 
 def data_processing(res_id, transform_type, left, right='2020-12-31', train_frac=0.6, val_frac=0.2, test_frac=0.2, log_names=[], return_scaler=False, storage=False):
     """
@@ -115,6 +108,8 @@ def train_one_reservoir(res_id, left_year, storage):
     train_losses, val_losses = training_loop(model=model, criterion=criterion, optimizer=optimizer, 
                                             patience=10, dataloader_train=dataloader_train, 
                                             dataloader_val=dataloader_val, epochs=300)
+    # Save model
+    torch.save(model.state_dict(), f'src/models/saved_models/resops_model1/resops_model{"1S" if storage else "1"}_{res_id}.pt')
     
     # Evaluate train/val/test R2 score
     r2_train, r2_val, r2_test = eval_train_val_test(model=model, X_train=train_tuple[0], X_val=val_tuple[0], X_test=test_tuple[0],
