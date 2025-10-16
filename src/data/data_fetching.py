@@ -60,20 +60,23 @@ def filter_res(record_frac=0.9):
     
     return res_list
 
-def split_df_data(id, left, right='2020-12-31', data_splits=(0.6, 0.2, 0.2)):
+def split_df_data(id, left, right=None, data_splits=(0.6, 0.2, 0.2), fill_train_mean=False):
     """
     Fetch original df data for one ResOPS or USBR reservoir in given time window, split into train/val/test portions.
     Params:
     id -- str, ResOPS reservoir ID (numeric) or USBR name (character)
     left -- str (YYYY-MM-DD), beginning boundary of time window
-    right -- str (YYYY-MM-DD), end boundary of time window
-    data_splits -- tuple of floats, (train_frac, val_frac, test_frac) for data splits
+    right -- str (YYYY-MM-DD), end boundary of time window. If None apply default values: '2020-12-31' for ResOPS and '2022-12-31' for USBR
+    data_splits -- tuple of floats, (train_frac, val_frac, test_frac) for data splits. 0.6/0.2/0.2 by default
+    fill_train_mean -- whether to fill NaN with training mean (default is False)
     """
     # Read in data, columns are [inflow, outflow, storage]
     if id.isdigit():
         df = resops_fetch_data(res_id=id, vars=['inflow', 'outflow', 'storage'])
+        right = '2020-12-31' if right is None else right # Default right window for ResOPS
     else:
         df = usbr_fetch_data(name=id, vars=['inflow', 'outflow', 'storage'])
+        right = '2022-12-31' if right is None else right # Default right window for USBR
 
     # Select data window
     df = df[left:right].copy()
@@ -89,6 +92,10 @@ def split_df_data(id, left, right='2020-12-31', data_splits=(0.6, 0.2, 0.2)):
     df_train = df.iloc[:original_train_len, :]
     df_val = df.iloc[original_train_len:(original_train_len+original_val_len), :]
     df_test = df.iloc[(original_train_len+original_val_len):, :]
+
+    # (Optional) Fill NA with training mean
+    if fill_train_mean:
+        df_train, df_val, df_test = (df_train.fillna(df_train.mean()), df_val.fillna(df_train.mean()), df_test.fillna(df_train.mean()))
 
     return df_train, df_val, df_test
 
