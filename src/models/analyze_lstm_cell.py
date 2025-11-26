@@ -1,5 +1,6 @@
 ### FUNCTIONS AND CLASSES TO HELP ANALYZE THE RELATIONSHIP BETWEEN LSTM CELL STATES AND OBSERVED MASS STATES ###
 import numpy as np
+from sklearn.linear_model import LinearRegression
 
 def flatten_cells(cell_states):
     """ 
@@ -37,6 +38,57 @@ def cell_correlations(cell_states, storage_states):
         correlations.append(corr)
     return correlations
 
+class cell_linear_probe:
+    """
+    Class to train a linear regression model to predict storage states from cell states.
+    """
+    def __init__(self):
+        self.model = LinearRegression()
+        self.isfit = False
+    
+    def fit_probe(self, cell_states, storage_state):
+        """ 
+        Train a linear regression model to predict storage states from cell states.
+        Params (training data):
+        cell_states -- pytorch tensor, raw cell state from lstm (num_chunks, chunk_size, hidden_size)
+        storage_states -- numpy 1D array, series of storage states to compare cell states with (timesteps, )
+        Returns:
+        model -- trained linear regression model
+        """
+        storage = storage_state.flatten() # Shape (timesteps, )
+        cells = flatten_cells(cell_states)[:len(storage), :] # Shape (timesteps, hidden_size)
+        self.model.fit(cells, storage)
+        self.isfit = True
+        return
+    
+    def predict(self, cell_states):
+        """ 
+        Use the trained linear regression model to predict storage states from cell states.
+        Params:
+        cell_states -- pytorch tensor, raw cell state from lstm (num_chunks, chunk_size, hidden_size)
+        Returns:
+        predictions -- numpy 1D array, predicted storage states (timesteps, )
+        """
+        if not self.isfit:
+            raise Exception("Model must be fit before prediction.")
+        cells = flatten_cells(cell_states) # Shape (timesteps, hidden_size)
+        predictions = self.model.predict(cells)
+        return predictions
+    
+    def correlate_prediction(self, cell_states, storage_state):
+        """ 
+        Calculate the correlation coefficient between the predicted storage states and the observed storage states.
+        Params:
+        cell_states -- pytorch tensor, raw cell state from lstm (num_chunks, chunk_size, hidden_size)
+        storage_states -- numpy 1D array, series of storage states to compare cell states with (timesteps, )
+        Returns:
+        corr -- float, correlation coefficient between predicted and observed storage states
+        """
+        storage = storage_state.flatten()
+        predictions = self.predict(cell_states)[:len(storage)]
+        corr = np.ma.corrcoef(np.ma.masked_invalid(storage), np.ma.masked_invalid(predictions)).data[0, 1]
+        return corr
+    
 def plot_storage_cell(cell_states_all, storage_states, cell_id, ax, transform_type='standardize'):
     """ 
     Plot timeseries of particular cell state vs storage states.
