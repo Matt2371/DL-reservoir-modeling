@@ -1,65 +1,38 @@
 # DL-reservoir-modeling
-Deep learning approaches to modeling reservoir releases, with a focus on interpretable LSTM's that respect mass balance. 
+Diagnostics of LSTM approach to modeling large sample reservoir releases, with a focus on physical interpretability and generalization in space and time. 
 
-## Data
-Early work focuses on data from Shasta Reservoir since it has a long data record between 01-01-1944 and 12-31-2022. Data includes daily
-inflow, storage, and release, as well as elevation, evaporation, and precipitation. The data is sourced from the US Bureau of Reclamation.
+## Abstract
+The influence of reservoirs on the water cycle introduces significant uncertainty for hydrologic prediction. The representation of reservoirs in hydrologic models ideally must be accurate, interpretable, and transferable across sites. Recent studies have highlighted the potential for data-driven methods, including long short-term memory (LSTM) networks, to accurately capture reservoir releases. However, the performance of LSTM models of reservoir releases has not yet been diagnosed on a large-sample dataset to understand whether their accuracy is physically justified. This study evaluates the ability of LSTMs to represent reservoir release policies across the continental U.S., leveraging the recently developed ResOpsUS dataset. In particular, we focus on four key challenges to the development and application of LSTMs for this purpose: architecture selection, mass conservation, nonstationarity in time, and large-sample pooled training. We find that in many cases the LSTM succeeds in encoding physically interpretable storage dynamics in its internal states. However, the model accuracy is only weakly related to the strength of the learned storage representation; instead, it is log-linearly related to the degree of regulation. In addition, LSTMs struggle to generalize in time, where distributional shifts in operating conditions may cause unstable accuracy, and in space, where large sample pooled training fails to improve performance. This study contributes to the growing literature on interpreting deep learning models of human-hydrologic systems
 
-## Methodology
-1. Conduct a train/validation/test on the first 60%, 20% and 20% of the data, respectively. The data is not shuffled so that time order is preserved.
-This corresponds to a period of 1944-01-01 to 1991-05-26 for the trainging set, 1991-05-27 to 2007-03-14 for the validation set, and 2007-03-15 to 2022-12-31
-for the test set.
-2. Train LSTM models using the training data, while validating and hyperparameter tuning on the validation set. The test set is used to evaluate final
-model performance. After the models are trained, we are interested in examining how the models respect mass balance. For example, we want to explore if
-an LSTM trained given inflows and the day of the year (DOY) as input will respect mass balance by learning storage states in its memory cells. 
+## Data Source
+Daily reservoir inflow, outflow, and storage data is primarily sourced for the ResOPS US dataset, with supporting experiments using data from Shasta, Folsom, Trinity, and New Melones reservoirs sourced from the US Bureau of Reclamation.
 
-## Source Code
+## Source Code (src/)
 The source code is organized into two main modules: data and models.
 
-### Data
-1. The data_fetching submodule reads csv data located in data/USBR/Shasta/ (NOT INCLUDED ON GITHUB) and concatenates data from the requested variales, returning
-a single dataframe.
-2. The data_processing submodule contains the data processing pipeline, which includes conducting a train/val/test split, standardizing or normalizing (min-max transform) the time dependent features based on statistics from the training data, splitting the data into batches of 3 years long (for more stable training), and padding the remainder
-with the token -1. Missing values are also filled with the mean from the training set after the data is transformed.
-The full pipeline can be accessed using the class processing_pipeline, where the process data method takes the raw 2d data (timesteps, features) and returns PyTorch tensors
-of shape (batches, batch size - e.g. 3 years, features) corresponding the the train/val/test datasets.
-
-### Models
-1. The model_zoo contains class definitions for PyTorch models used in the project.\
+### LSTM Training (src/models/)
+1. model_zoo.py contains class definitions for PyTorch models used throughout the project.\
 Model 1a: LSTM + 1 layer FF network that takes inflow and DOY as input. Data is standardized. Trained on MSE\
 Model 1b: LSTM + 1 layer FF network that takes inflow and DOY as input. Data is normalized. Trained on MSE\
 Model 1c: LSTM + 1 layer FF network that takes inflow and DOY as input. Data is normalized. Trained on RMSLE (root mean square logarithmic loss)\
-Model 2: the same architecture as Model 1, except the previous predicted release is also an input to the next timestep (autoregressive LSTM)
+Model 2: the same architecture as Model 1, except the previous predicted release is also an input to the next timestep (autoregressive LSTM)\
 Model 3: LSTM + 1 layer FF. Takes inflow and DOY as input. Maintains an implied storage variable (used as input) based on previous implied storage,
-previous release, and current inflow. Data is standardized. Trained on MSE.
+previous release, and current inflow. Data is standardized. Trained on MSE.\
+Model 4: RNN with implied storage. Similar to Model 3 but without LSTM gates. Trained on MSE.
+2. train_model.py supports masking padded values from the loss function, implementing early stopping (applied by default), and conducting the training loop (via the training_loop function)
+3. predict_model.py supports using pretrained models to make predictions/inferences. flatten_rm_pad() function flattens the model output of shape (# batches, timesteps, 1 (outflow)) into a 1d array and removes padded values.
+4. hyperparameter_tuning.py supports the hyperparameter tuning of the model. exhaustive_grid() function returns a dataframe of all possible hyperparameter combinations given
+an input search space.
 
-2. The train_model submodule defines functions and classes for masking padded values from the loss function, implementing early stopping (applied by default), and conducting the training loop. The full
-training loop can be accessed using the training_loop function, given the PyTorch model, optimizer, and criterion (e.g. MSE loss), and the desired patience for the early stopper.
+### Data Processing (src/data/)
+1. data_fetching.py: supports reading of csv data for requested variales from either ResOPS US or USBR as a pandas dataframe
+2. data_processing.py details the data processing pipeline, which includes train/val/test split, standardization or normalization (min-max transform), splitting the data into Pytorch Tensors of shape (# batches, batch size, # features), padding the remainder, and filling missing values (i.e. with training mean)
 
-3. The predict_model submodule contains functions and classes that support the use of models in making predictions/inferences. Notably, the flatten_rm_pad() function flattens the model output
-of shape (# batches, timesteps, 1) into a 1d array, with padded values (previously to fill the remainder when splitting data into chunks) removed, making it easier to plot or conduct analysis.
+## Experiments (experiments/)
+Model training, exploratory analysis, and figure generation
 
-4. hyperparameter_tuning contains functions that support the hyperparameter tuning of the model. Notably, the exhaustive_grid function returns a dataframe of all possible hyperparameter combinations given
-an input search space. This is useful for setting grid search.
+## Tests (tests/)
+Unit tests to check consistency of data processing and model shape in forward pass.
 
-5. analyze_lstm_cell supports the interpretation of lstm memory cells. For example, cell_correlations calculates the correlation between memory cell states and an observed state such as storage. plot_cell_storage
-plots the scaled timeseries of memory cells comapred to storage states.
-
-6. custom_loss defines custom loss functions in PyTorch
-
-## Tests
-Contains unittests of the experimental process throughout, with a focus on data processing and model shape in the forward pass. To run a unittest, run the command py -m unittest tests.(name of test script)
-
-## Experiments
-The experiments directory contains notebooks and scripts detailing conducted experiements, including model hyperparameter tuning, training, and anlysis:
-1. 1_model1_tuning.py:
-2. 2_model1_analysis.ipynb:
-3. 3_model2_tuning.py:
-4. 4_model2_analysis.ipynb:
-5. 5_model3_tuning.py:
-
-## Setup
-setup.py enables src to be imported throughout the project and installs dependencies after running command 'pip install -e .' in
-the project directory DL-reservoir-modeling/
 
 
