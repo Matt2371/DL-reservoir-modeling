@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/656311285.svg)](https://doi.org/10.5281/zenodo.17861202)
+
 # DL-reservoir-modeling
 Diagnostics of LSTM approach to modeling large sample reservoir releases, with a focus on physical interpretability and generalization in space and time. 
 
