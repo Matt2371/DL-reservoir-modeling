@@ -168,3 +168,6 @@ archive/
 
 # Ignore NSF GRFP application files
 nsf_grfp/
+
+# Ignore references
+report/drafting/references/
