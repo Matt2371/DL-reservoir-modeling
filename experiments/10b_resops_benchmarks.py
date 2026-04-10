@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from tqdm import tqdm
+from joblib import dump, load
 
 from src.data.data_processing import *
 from src.data.data_fetching import *
@@ -82,6 +83,9 @@ def train_one_reservoir(res_id, left_year, type):
 
     # Train model
     model.fit(*train_tuple)
+
+    # Save model
+    dump(model, f'src/models/saved_models/resops_benchmark_models/resops_{type}_{res_id}.joblib')
     
     # Evaluate train/val/test R2 score
     r2_train, r2_val, r2_test = eval_train_val_test_lagged(model=model, X_train=train_tuple[0], X_val=val_tuple[0], X_test=test_tuple[0],
