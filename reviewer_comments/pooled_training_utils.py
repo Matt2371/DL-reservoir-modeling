@@ -157,9 +157,9 @@ class multi_reservoir_data:
     
     def fetch_data(self):
         # Run data processing for each reservoir
-        for reservoir, left_year in tqdm(self.left_years_dict.items(), desc='Processing data: '):
+        for reservoir in tqdm(self.res_list, desc='Processing data: '):
             result = data_processing(res_id=reservoir, transform_type='standardize', train_frac=0.6, val_frac=0.2, test_frac=0.2,
-                                    left=f'{left_year}-01-01', right='2020-12-31',
+                                    left=f'{self.left_years_dict[reservoir]}-01-01', right='2020-12-31',
                                     return_scaler=True, attributes=self.attributes)
             # Save results
             self.X_train_dict[reservoir] = result[0][0] # (# chunks, chunk size, # features (e.g. inflow and doy))
