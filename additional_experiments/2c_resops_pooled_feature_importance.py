@@ -22,10 +22,10 @@ from src.models.model_zoo import *
 from src.models.predict_model import *
 from src.models.train_model import get_device
 
-from reviewer_comments.pooled_training_utils import get_attributes
+from additional_experiments.pooled_training_utils import get_attributes
 
 
-OUTPUT_DIR = 'report/results/reviewer_comments/hyperparameter_tuning_pooled'
+OUTPUT_DIR = 'report/results/additional_experiments/hyperparameter_tuning_pooled'
 CHECKPOINT_PATH = f'{OUTPUT_DIR}/resops_simul_model.pt'
 OOS_RESULTS_PATH = f'{OUTPUT_DIR}/resops_oos_out_of_sample_test.csv'
 SUMMARY_PATH = f'{OUTPUT_DIR}/resops_pooled_feature_importance_summary.csv'
@@ -105,7 +105,7 @@ def data_processing(
 
 def get_input_feature_columns(df, storage=False):
     """
-    Build input feature column names in the same style as experiment reviewer_comments/2a.
+    Build input feature column names in the same style as experiment additional_experiments/2a.
     Returns:
     feature_names -- ordered list of model input feature names
     processed_input_cols -- feature columns sent through processing_pipeline
@@ -186,7 +186,7 @@ def infer_model_hyperparameters(state_dict):
 
 def load_pooled_model(checkpoint_path, device):
     """
-    Load pooled LSTM model from reviewer-comments checkpoint.
+    Load pooled LSTM model from additional-experiments checkpoint.
     """
     state_dict = torch.load(checkpoint_path, weights_only=True, map_location=device)
     model_kwargs = infer_model_hyperparameters(state_dict)
@@ -278,7 +278,7 @@ def compute_grouped_permutation_importance(model, X_test, y_test, feature_names,
 
 def plot_feature_importance(results_df, figure_path):
     """
-    Create a bar chart in the same simple Matplotlib style used elsewhere in reviewer comments.
+    Create a bar chart in the same simple Matplotlib style used elsewhere in additional experiments.
     """
     fig, ax = plt.subplots()
     ax.bar(
@@ -306,7 +306,7 @@ def main():
     device = torch.device("cpu")
     print(f'Using device: {device}')
 
-    # Match the reviewer-comments pooled training setup
+    # Match the additional-experiments pooled training setup
     attribute_df = get_attributes(index_type=int)
     res_list = pd.read_csv(OOS_RESULTS_PATH, index_col=0).index.to_list()
     left_years_dict = get_left_years(res_list=res_list)

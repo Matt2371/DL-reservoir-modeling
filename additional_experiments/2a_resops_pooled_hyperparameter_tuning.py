@@ -27,7 +27,7 @@ from src.models.predict_model import *
 from src.models.train_model import *
 from src.models.hyperparameter_tuning import *
 
-from reviewer_comments.pooled_training_utils import (get_attributes, 
+from additional_experiments.pooled_training_utils import (get_attributes, 
                                                      data_processing, 
                                                      multi_reservoir_data_oos, 
                                                      train_simultaneous_model)
@@ -134,7 +134,7 @@ def create_parallel_axis(result):
         parent_dir,
         'report',
         'results',
-        'reviewer_comments',
+        'additional_experiments',
         'hyperparameter_tuning_pooled'
     )
     os.makedirs(output_dir, exist_ok=True)
@@ -177,7 +177,7 @@ def main():
     #     .drop(columns=['random_seed'], errors='ignore')
     #     .sort_values(by='val_error', axis=0, ascending=True).head(10))
     create_parallel_axis(grid_search_df)
-    grid_search_df.to_csv(f'report/results/reviewer_comments/hyperparameter_tuning_pooled/grid_search_model1_pooled.csv')
+    grid_search_df.to_csv(f'report/results/additional_experiments/hyperparameter_tuning_pooled/grid_search_model1_pooled.csv')
 
 
     # -----   Train and save final model with best hyperparameters    ----- #
@@ -200,7 +200,7 @@ def main():
                                            plot=False, device=device)
     
     # Save model
-    torch.save(simul_model.state_dict(), 'report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_simul_model.pt')
+    torch.save(simul_model.state_dict(), 'report/results/additional_experiments/hyperparameter_tuning_pooled/resops_simul_model.pt')
     
     # -----     Evaluate and save in-sample performance     ----- #
 
@@ -211,14 +211,14 @@ def main():
                                                           y=data_combiner.y_train_dict[in_res]),
                                           r2_score_tensor(model=simul_model, X=data_combiner.X_val_dict[in_res], 
                                                           y=data_combiner.y_val_dict[in_res])]
-    r2_in_sample_df.to_csv('report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_oos_in_sample_train_val.csv')
+    r2_in_sample_df.to_csv('report/results/additional_experiments/hyperparameter_tuning_pooled/resops_oos_in_sample_train_val.csv')
 
     # -----     Evaluate and save out-of-sample performance     ----- #
 
     r2_out_sample_df = pd.DataFrame(index=data_combiner.oos_list, columns=['test'])
     for out_res in tqdm(data_combiner.oos_list, desc='Evaluating out-of-sample performance: '):
         r2_out_sample_df.loc[out_res, :] = r2_score_tensor(model=simul_model, X=data_combiner.X_test_dict[out_res], y=data_combiner.y_test_dict[out_res])
-    r2_out_sample_df.to_csv('report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_oos_out_of_sample_test.csv')
+    r2_out_sample_df.to_csv('report/results/additional_experiments/hyperparameter_tuning_pooled/resops_oos_out_of_sample_test.csv')
 
     return
 

@@ -26,7 +26,7 @@ from src.models.model_zoo import *
 from src.models.predict_model import *
 from src.models.train_model import *
 
-SAVE_DIR = os.path.join('report', 'results', 'reviewer_comments', 'resops_training_sincos')
+SAVE_DIR = os.path.join('report', 'results', 'additional_experiments', 'resops_training_sincos')
 os.makedirs(SAVE_DIR, exist_ok=True)
 MODEL_SAVE_DIR = os.path.join(SAVE_DIR, 'saved_models')
 os.makedirs(MODEL_SAVE_DIR, exist_ok=True)

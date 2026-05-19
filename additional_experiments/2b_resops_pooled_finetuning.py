@@ -29,7 +29,7 @@ from src.models.model_zoo import *
 from src.models.predict_model import *
 from src.models.train_model import *
 
-from reviewer_comments.pooled_training_utils import get_attributes, data_processing, multi_reservoir_data
+from additional_experiments.pooled_training_utils import get_attributes, data_processing, multi_reservoir_data
 
 def finetune_first_nyears(res_id, left_year, nyears, attributes=None, baseline=False, device=torch.device("cpu")):
     """
@@ -65,7 +65,7 @@ def finetune_first_nyears(res_id, left_year, nyears, attributes=None, baseline=F
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     if not baseline:
-        model.load_state_dict(torch.load('report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_simul_model.pt', weights_only=True))
+        model.load_state_dict(torch.load('report/results/additional_experiments/hyperparameter_tuning_pooled/resops_simul_model.pt', weights_only=True))
 
     dataset_train, dataset_val = (TensorDataset(*data_result[0]), TensorDataset(*data_result[1]))
     dataloader_train, dataloader_val = (DataLoader(dataset_train, batch_size=1, shuffle=False), 
@@ -86,8 +86,8 @@ def main():
     # Get reservoir attributes dataframe
     attribute_df = get_attributes(index_type=int)
 
-    # Read list of out-of-sample reservoirs from reviewer_comments 2a, get left years dictionary
-    res_list = pd.read_csv('report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_oos_out_of_sample_test.csv', index_col=0).index.to_list()
+    # Read list of out-of-sample reservoirs from additional_experiments 2a, get left years dictionary
+    res_list = pd.read_csv('report/results/additional_experiments/hyperparameter_tuning_pooled/resops_oos_out_of_sample_test.csv', index_col=0).index.to_list()
     left_year_dict = get_left_years(res_list=res_list)
     
     # Get final 20% of data record as test set, initialize dataframe to store results comparing
@@ -128,7 +128,7 @@ def main():
     model_pooled = LSTMModel1_opt(input_size=input_size, hidden_size1=hidden_size1, 
                                 hidden_size2=hidden_size2, output_size=output_size, 
                                 num_layers=num_layers, dropout_prob=dropout_prob)
-    model_pooled.load_state_dict(torch.load('report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_simul_model.pt', weights_only=True))
+    model_pooled.load_state_dict(torch.load('report/results/additional_experiments/hyperparameter_tuning_pooled/resops_simul_model.pt', weights_only=True))
     for res in res_list:
         final_results.loc[res, 'pooled'] = r2_score_tensor(model=model_pooled,
                                                                 X=X_test_dict[res],
@@ -152,8 +152,8 @@ def main():
                                                                                       X=X_test_dict[res],
                                                                                       y=y_test_dict[res])
     # Save final results
-    final_results.to_csv('report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_oos_finetuning.csv')
-    baseline_results.to_csv('report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_oos_finetuning_baseline.csv')
+    final_results.to_csv('report/results/additional_experiments/hyperparameter_tuning_pooled/resops_oos_finetuning.csv')
+    baseline_results.to_csv('report/results/additional_experiments/hyperparameter_tuning_pooled/resops_oos_finetuning_baseline.csv')
     return
 
 # run script

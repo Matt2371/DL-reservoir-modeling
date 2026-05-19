@@ -7,7 +7,7 @@ parent_dir = os.path.abspath(os.path.join(file_dir, '..'))
 sys.path.append(parent_dir)
 
 from src.data.data_fetching import filter_res, get_left_years
-from reviewer_comments.alternative_metrics_utils import (
+from additional_experiments.alternative_metrics_utils import (
     eval_pred_train_val_test_metrics_numpy,
     eval_pred_train_val_test_percentile_pbias_rmse_numpy,
     data_processing_rule_based,
@@ -106,7 +106,7 @@ def eval_all_reservoirs_rule_based_percentile_metrics(res_list, left_years_dict,
 ############# MAIN EXPORT SCRIPT #############
 
 def main():
-    result_dir = 'report/results/reviewer_comments/alternative_metrics'
+    result_dir = 'report/results/additional_experiments/alternative_metrics'
     lower_quantile = 0.90
     os.makedirs(result_dir, exist_ok=True)
 

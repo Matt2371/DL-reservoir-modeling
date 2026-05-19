@@ -215,7 +215,7 @@ def create_parallel_axis(res_id, result):
         parent_dir,
         'report',
         'results',
-        'reviewer_comments',
+        'additional_experiments',
         'hyperparameter_tuning_resops'
     )
     os.makedirs(output_dir, exist_ok=True)
@@ -250,7 +250,7 @@ def main(n=None, random_seed=0):
     # Conduct grid search and produce pallel axis plot for each reservoir
     for res_id in res_list:
         result = grid_search_one_reservoir(res_id=res_id, left_year=left_years_dict[res_id], device=device)
-        result.to_csv(f'report/results/reviewer_comments/hyperparameter_tuning_resops/logs/{res_id}_grid_search.csv')
+        result.to_csv(f'report/results/additional_experiments/hyperparameter_tuning_resops/logs/{res_id}_grid_search.csv')
         create_parallel_axis(res_id=res_id, result=result)
     return
 

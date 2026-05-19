@@ -9,7 +9,7 @@ sys.path.append(parent_dir)
 from wakepy import keep
 
 from src.data.data_fetching import filter_res, get_left_years
-from reviewer_comments.alternative_metrics_utils import (
+from additional_experiments.alternative_metrics_utils import (
     data_processing_pytorch,
     eval_train_val_test_metrics,
     eval_train_val_test_percentile_pbias_rmse,
@@ -110,7 +110,7 @@ def eval_all_reservoirs_unroll_percentile_metrics(res_list, left_years_dict, mod
 ############# MAIN EXPORT SCRIPT #############
 
 def main():
-    result_dir = 'report/results/reviewer_comments/alternative_metrics'
+    result_dir = 'report/results/additional_experiments/alternative_metrics'
     lower_quantile = 0.90
     os.makedirs(result_dir, exist_ok=True)
 

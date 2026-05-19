@@ -24,7 +24,7 @@ from src.models.train_model import *
 from src.models.hyperparameter_tuning import *
 from src.models.analyze_lstm_cell import *
 
-from reviewer_comments.pooled_training_utils import (
+from additional_experiments.pooled_training_utils import (
     get_attributes,
     data_processing,
     multi_reservoir_data_oos,
@@ -32,10 +32,10 @@ from reviewer_comments.pooled_training_utils import (
 )
 
 
-OOS_LIST_PATH = 'report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_oos_out_of_sample_test.csv'
-POOLED_GRID_SEARCH_PATH = 'report/results/reviewer_comments/hyperparameter_tuning_pooled/grid_search_model1_pooled.csv'
-POOLED_UNROLL_MODEL_PATH = 'report/results/reviewer_comments/hyperparameter_tuning_pooled/resops_simul_unroll_model.pt'
-SAVE_DIR = 'report/results/reviewer_comments/pooled_linear_probe'
+OOS_LIST_PATH = 'report/results/additional_experiments/hyperparameter_tuning_pooled/resops_oos_out_of_sample_test.csv'
+POOLED_GRID_SEARCH_PATH = 'report/results/additional_experiments/hyperparameter_tuning_pooled/grid_search_model1_pooled.csv'
+POOLED_UNROLL_MODEL_PATH = 'report/results/additional_experiments/hyperparameter_tuning_pooled/resops_simul_unroll_model.pt'
+SAVE_DIR = 'report/results/additional_experiments/pooled_linear_probe'
 FINETUNE_YEARS = [5, 10, 15, 20, 25, 30]
 
 
